@@ -1,0 +1,43 @@
+# =============================================================================
+# Trading Platform .gitignore
+# =============================================================================
+
+# Environment Variables
+# Contains sensitive information like API keys, database credentials, tokens
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+.venv/
+# =============================================================================
+# Python
+# =============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+*.log
+*.txt
+
+*/node_modules/
+
+*.json
+
+*/dist/
+
+*/webfonts/
+
+*/favicon_io/
+
+daisyui.full.css
+
+font-awesome.min.css
+
+output.css
