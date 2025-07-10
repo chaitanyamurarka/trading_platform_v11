@@ -114,14 +114,14 @@ graph LR
     style F fill:#f9f,stroke:#333,stroke-width:2px
     style FA fill:#bbf,stroke:#333,stroke-width:2px
     style FW fill:#bbf,stroke:#333,stroke-width:2px
-    style B0 fill:#ccf,stroke:#333,stroke-width:2px
-    style B1 fill:#ccf,stroke:#333,stroke-width:2px
-    style B2 fill:#ccf,stroke:#333,stroke-width:2px
-    style B3 fill:#ccf,stroke:#333,stroke-width:2px
-    style B4 fill:#ccf,stroke:#333,stroke-width:2px
-    style B5 fill:#ccf,stroke:#333,stroke-width:2px
-    style B6 fill:#ccf,stroke:#333,stroke-width:2px
-    style B7 fill:#ccf,stroke:#333,stroke-width:2px
+    style B0 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style B1 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style B2 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style B3 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style B4 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style B5 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style B6 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style B7 fill:#AEC6CF,stroke:#333,stroke-width:2px
 ```
 
 ### Project Directory Structure
