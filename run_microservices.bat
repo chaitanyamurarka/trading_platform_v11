@@ -14,3 +14,5 @@ timeout /t 1 /nobreak > nul
 start python Microservices\Port8001.py
 timeout /t 1 /nobreak > nul
 start python Microservices\Port8000.py
+
+pause

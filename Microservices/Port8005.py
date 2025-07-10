@@ -25,22 +25,8 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Logging Setup
-def setup_logging():
-    log_formatter = logging.Formatter('%(asctime)s - WEBSOCKET_HEIKIN_ASHI - %(levelname)s - %(message)s')
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(log_formatter)
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG) # Set to DEBUG to capture all levels
-    root_logger.addHandler(console_handler)
-
-    # Add file handler
-    file_handler = logging.FileHandler('app.log')
-    file_handler.setFormatter(log_formatter)
-    root_logger.addHandler(file_handler)
-    return root_logger
-
-setup_logging()
+from logging_config import setup_logging, correlation_id
+setup_logging("websocket_heikin_ashi")
 logger = logging.getLogger(__name__)
 
 # Schemas
@@ -641,5 +627,6 @@ if __name__ == "__main__":
         app, 
         host="0.0.0.0", 
         port=8005, 
-        log_level="info",
+        log_level="warning",  # Suppress info/debug
+        access_log=False,     # No access logs in terminal
     )
