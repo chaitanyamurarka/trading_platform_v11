@@ -111,17 +111,17 @@ graph LR
         FW --> B7(Port8007.py)
     end
 
-    style F fill:#f9f,stroke:#333,stroke-width:2px
-    style FA fill:#bbf,stroke:#333,stroke-width:2px
-    style FW fill:#bbf,stroke:#333,stroke-width:2px
-    style B0 fill:#AEC6CF,stroke:#333,stroke-width:2px
-    style B1 fill:#AEC6CF,stroke:#333,stroke-width:2px
-    style B2 fill:#AEC6CF,stroke:#333,stroke-width:2px
-    style B3 fill:#AEC6CF,stroke:#333,stroke-width:2px
-    style B4 fill:#AEC6CF,stroke:#333,stroke-width:2px
-    style B5 fill:#AEC6CF,stroke:#333,stroke-width:2px
-    style B6 fill:#AEC6CF,stroke:#333,stroke-width:2px
-    style B7 fill:#AEC6CF,stroke:#333,stroke-width:2px
+    style F fill:#C8E6C9,stroke:#333,stroke-width:2px,color:#000;
+    style FA fill:#BBDEFB,stroke:#333,stroke-width:2px,color:#000;
+    style FW fill:#BBDEFB,stroke:#333,stroke-width:2px,color:#000;
+    style B0 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
+    style B1 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
+    style B2 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
+    style B3 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
+    style B4 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
+    style B5 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
+    style B6 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
+    style B7 fill:#AEC6CF,stroke:#333,stroke-width:2px,color:#000;
 ```
 
 ### Project Directory Structure
@@ -155,33 +155,33 @@ graph TD
     A --> H[README.md]
     A --> I[.gitignore]
 
-    style A fill:#ADD8E6,stroke:#333,stroke-width:2px
-    style B fill:#FFD700,stroke:#333,stroke-width:2px
-    style C fill:#FFD700,stroke:#333,stroke-width:2px
-    style D fill:#90EE90,stroke:#333,stroke-width:2px
-    style D1 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style D2 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style D3 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style D3a fill:#E0FFFF,stroke:#333,stroke-width:1px
-    style D3b fill:#E0FFFF,stroke:#333,stroke-width:1px
-    style D3c fill:#E0FFFF,stroke:#333,stroke-width:1px
-    style D3d fill:#E0FFFF,stroke:#333,stroke-width:1px
-    style E fill:#FFB6C1,stroke:#333,stroke-width:2px
-    style E1 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E2 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E3 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E4 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E5 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E6 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E7 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E8 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style E9 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style F fill:#ADD8E6,stroke:#333,stroke-width:2px
-    style F1 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style F2 fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style G fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style H fill:#D3D3D3,stroke:#333,stroke-width:1px
-    style I fill:#D3D3D3,stroke:#333,stroke-width:1px
+    style A fill:#ADD8E6,stroke:#333,stroke-width:2px,color:#000;
+    style B fill:#FFD700,stroke:#333,stroke-width:2px,color:#000;
+    style C fill:#FFD700,stroke:#333,stroke-width:2px,color:#000;
+    style D fill:#90EE90,stroke:#333,stroke-width:2px,color:#000;
+    style D1 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style D2 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style D3 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style D3a fill:#E0FFFF,stroke:#333,stroke-width:1px,color:#000;
+    style D3b fill:#E0FFFF,stroke:#333,stroke-width:1px,color:#000;
+    style D3c fill:#E0FFFF,stroke:#333,stroke-width:1px,color:#000;
+    style D3d fill:#E0FFFF,stroke:#333,stroke-width:1px,color:#000;
+    style E fill:#FFB6C1,stroke:#333,stroke-width:2px,color:#000;
+    style E1 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E2 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E3 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E4 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E5 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E6 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E7 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E8 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style E9 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style F fill:#ADD8E6,stroke:#333,stroke-width:2px,color:#000;
+    style F1 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style F2 fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style G fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style H fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
+    style I fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#000;
 ```
 
 ## Project Structure
