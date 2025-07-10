@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from typing import Dict, Set, Optional, Any, List
 from dataclasses import dataclass, field
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Path
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 import redis.asyncio as aioredis
@@ -418,6 +419,14 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Global connection manager
