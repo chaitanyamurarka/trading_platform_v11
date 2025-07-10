@@ -7,6 +7,8 @@
 
 // --- API Configuration ---
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
+const API_BASE_URL_HA_Live = `${window.location.protocol}//${window.location.hostname}:8005`;
+// const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
 // --- Session Management Functions ---
 
