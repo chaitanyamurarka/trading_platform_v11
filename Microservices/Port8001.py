@@ -27,8 +27,13 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.DEBUG) # Set to DEBUG to capture all levels
     root_logger.addHandler(console_handler)
+
+    # Add file handler
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
     return root_logger
 
 setup_logging()
@@ -54,6 +59,8 @@ class SymbolService:
         """Load the list of symbols from Redis into memory."""
         try:
             symbols_data = await self.redis_client.get(REDIS_SYMBOLS_KEY)
+            # DEBUG: Log raw Redis message and cache operation
+            logger.debug(f"Redis GET command for symbols: {REDIS_SYMBOLS_KEY}")
             if symbols_data:
                 self.available_symbols = json.loads(symbols_data)
                 logger.info(f"Successfully loaded {len(self.available_symbols)} symbols from Redis.")
@@ -84,12 +91,16 @@ class SymbolService:
                 message = await self.pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message and message['type'] == 'message':
                     message_data = message['data']
+                    # DEBUG: Log raw Redis message
+                    logger.debug(f"Received raw Redis message: {message_data}")
                     if message_data == "symbols_updated":
                         logger.info(f"Received 'symbols_updated' message. Reloading all symbols.")
                         await self.load_symbols_from_redis()
                     else:
                         try:
                             new_symbols = json.loads(message_data)
+                            # DEBUG: Log data transformation step
+                            logger.debug(f"Decoded new symbols from Redis message: {new_symbols}")
                             if isinstance(new_symbols, list):
                                 for new_symbol in new_symbols:
                                     if new_symbol not in self.available_symbols:
@@ -205,11 +216,16 @@ async def health_check():
     redis_connected = True
     try:
         await symbol_service.redis_client.ping()
+        logger.debug("Redis ping successful.")
     except Exception:
         redis_connected = False
+        logger.error("Redis connection failed during health check.")
+    
+    status = "healthy" if redis_connected else "unhealthy"
+    logger.info(f"Health check result: {status}. Symbol count: {symbol_count}, Redis connected: {redis_connected}")
     
     return {
-        "status": "healthy" if redis_connected else "unhealthy",
+        "status": status,
         "symbol_count": symbol_count,
         "redis_connected": redis_connected,
         "subscription_active": symbol_service.listen_task is not None and not symbol_service.listen_task.done(),

@@ -46,8 +46,13 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.DEBUG) # Set to DEBUG to capture all levels
     root_logger.addHandler(console_handler)
+
+    # Add file handler
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
     return root_logger
 
 setup_logging()
@@ -109,17 +114,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         data = await redis_client.get(key)
         if data:
             requests = json.loads(data)
+            # DEBUG: Log cache operation - data transformation
+            logger.debug(f"Rate limit cache data retrieved for {client_ip}: {requests}")
             requests = [req_time for req_time in requests 
                        if current_time - req_time < self.period]
         else:
             requests = []
-
+        
         # Check if limit exceeded
         if len(requests) >= self.calls:
+            logger.warning(f"Rate limit triggered for IP: {client_ip}. {len(requests)} requests in {self.period} seconds.")
             raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
         # Add current request
         requests.append(current_time)
+        # DEBUG: Log cache operation - setting data
+        logger.debug(f"Rate limit cache data set for {client_ip}: {requests}")
         await redis_client.setex(key, self.period, json.dumps(requests))
         
         return await call_next(request)
@@ -182,6 +192,8 @@ async def shutdown_event():
 async def initiate_session():
     """Generate a new unique session token for a client."""
     session_token = str(uuid.uuid4())
+    # DEBUG: Log raw Redis message for session creation
+    logger.debug(f"Redis SET command for session: session:{session_token} with expiry 60*45")
     await redis_client.set(f"session:{session_token}", int(time.time()), ex=60 * 45)
     logger.info(f"New session created: {session_token}")
     return SessionInfo(session_token=session_token)
@@ -191,9 +203,12 @@ async def session_heartbeat(session: SessionInfo):
     """Refresh the TTL of an active session token."""
     token_key = f"session:{session.session_token}"
     if await redis_client.exists(token_key):
+        # DEBUG: Log raw Redis message for session heartbeat
+        logger.debug(f"Redis EXPIRE command for session: {token_key} with expiry 60*45")
         await redis_client.expire(token_key, 60 * 45)
         return {"status": "ok"}
     else:
+        logger.warning(f"Session heartbeat failed: Session {session.session_token} not found or expired.")
         raise HTTPException(status_code=404, detail="Session not found or expired.")
 
 # Symbol Service Proxy
@@ -203,6 +218,7 @@ async def get_available_symbols():
     try:
         response = await http_client.get(f"{settings.SYMBOL_SERVICE_URL}/symbols")
         response.raise_for_status()
+        logger.info(f"Successfully fetched symbols from Symbol Service. Count: {len(response.json())}")
         return response.json()
     except httpx.RequestError as e:
         logger.error(f"Error connecting to Symbol Service: {e}")
@@ -221,7 +237,9 @@ async def fetch_historical_data(request: Request): # MODIFIED
             params=request.query_params # MODIFIED
         )
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        logger.info(f"Successfully fetched historical regular data. Count: {len(data)}")
+        return data
     except httpx.RequestError as e:
         logger.error(f"Error connecting to Historical Regular Service: {e}")
         raise HTTPException(status_code=503, detail="Historical Regular Service unavailable")
@@ -237,7 +255,9 @@ async def fetch_historical_chunk(request: Request): # MODIFIED
             params=request.query_params # MODIFIED
         )
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        logger.info(f"Successfully fetched historical regular data chunk. Count: {len(data)}")
+        return data
     except httpx.RequestError as e:
         logger.error(f"Error connecting to Historical Regular Service: {e}")
         raise HTTPException(status_code=503, detail="Historical Regular Service unavailable")
@@ -277,6 +297,7 @@ async def websocket_proxy_regular(
                 try:
                     while True:
                         data = await client_ws.receive_text()
+                        logger.debug(f"Forwarding client message to backend (regular): {data}")
                         await backend_ws.send(data)
                 except WebSocketDisconnect:
                     logger.info(f"Client disconnected for regular data on {symbol}")
@@ -288,6 +309,7 @@ async def websocket_proxy_regular(
                 try:
                     while True:
                         data = await backend_ws.recv()
+                        logger.debug(f"Forwarding backend message to client (regular): {data}")
                         await client_ws.send_text(data)
                 except Exception as e:
                     logger.error(f"Error forwarding from backend (regular): {e}")
@@ -317,7 +339,9 @@ async def fetch_heikin_ashi_data(request: Request): # MODIFIED
             params=request.query_params # MODIFIED
         )
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        logger.info(f"Successfully fetched Heikin Ashi historical data. Count: {len(data)}")
+        return data
     except httpx.RequestError as e:
         logger.error(f"Error connecting to Heikin Ashi Historical Service: {e}")
         raise HTTPException(status_code=503, detail="Heikin Ashi Historical Service unavailable")
@@ -333,7 +357,9 @@ async def fetch_heikin_ashi_chunk(request: Request): # MODIFIED
             params=request.query_params # MODIFIED
         )
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        logger.info(f"Successfully fetched Heikin Ashi historical data chunk. Count: {len(data)}")
+        return data
     except httpx.RequestError as e:
         logger.error(f"Error connecting to Heikin Ashi Historical Service: {e}")
         raise HTTPException(status_code=503, detail="Heikin Ashi Historical Service unavailable")
@@ -372,6 +398,7 @@ async def websocket_proxy_heikin_ashi(
                 try:
                     while True:
                         data = await client_ws.receive_text()
+                        logger.debug(f"Forwarding client message to backend (Heikin Ashi): {data}")
                         await backend_ws.send(data)
                 except WebSocketDisconnect:
                     logger.info(f"Client disconnected for {symbol}")
@@ -383,6 +410,7 @@ async def websocket_proxy_heikin_ashi(
                 try:
                     while True:
                         data = await backend_ws.recv()
+                        logger.debug(f"Forwarding backend message to client (Heikin Ashi): {data}")
                         await client_ws.send_text(data)
                 except Exception as e:
                     logger.error(f"Error forwarding from backend: {e}")
@@ -410,6 +438,7 @@ async def calculate_regression(request_data: dict):
     try:
         response = await http_client.post(f"{settings.REGRESSION_SERVICE_URL}/regression", json=request_data)
         response.raise_for_status()
+        logger.info(f"Successfully calculated regression. Response status: {response.status_code}")
         return response.json()
     except httpx.RequestError as e:
         logger.error(f"Error connecting to Regression Service: {e}")
@@ -424,6 +453,7 @@ async def get_live_regression_status():
     try:
         response = await http_client.get(f"{settings.LIVE_REGRESSION_URL}/live-regression/status")
         response.raise_for_status()
+        logger.info(f"Successfully fetched live regression status. Response status: {response.status_code}")
         return response.json()
     except httpx.RequestError as e:
         logger.error(f"Error connecting to Live Regression Service: {e}")
@@ -467,6 +497,7 @@ async def websocket_proxy_live_regression(
                 try:
                     while True:
                         data = await client_ws.receive_text()
+                        logger.debug(f"Forwarding client message to backend (live regression): {data}")
                         await backend_ws.send(data)
                 except WebSocketDisconnect:
                     logger.info(f"Client disconnected for live regression on {symbol}")
@@ -478,6 +509,7 @@ async def websocket_proxy_live_regression(
                 try:
                     while True:
                         data = await backend_ws.recv()
+                        logger.debug(f"Forwarding backend message to client (live regression): {data}")
                         await client_ws.send_text(data)
                 except Exception as e:
                     logger.error(f"Error forwarding from backend (live regression): {e}")
@@ -539,6 +571,11 @@ async def health_check():
     
     all_healthy = all(s["status"] == "healthy" for s in services_status.values())
     
+    if all_healthy:
+        logger.info("Health check: All services are healthy.")
+    else:
+        logger.warning("Health check: Some services are unhealthy or degraded.")
+
     return {
         "status": "healthy" if all_healthy else "degraded",
         "services": services_status,

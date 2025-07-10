@@ -31,8 +31,13 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.DEBUG) # Set to DEBUG to capture all levels
     root_logger.addHandler(console_handler)
+
+    # Add file handler
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
     return root_logger
 
 setup_logging()
@@ -58,7 +63,7 @@ class TickBarResampler:
         try:
             self.ticks_per_bar = int(interval_str.replace('tick', ''))
         except ValueError:
-            logger.error(f"Invalid tick interval format: {interval_str}. Defaulting to 1000.")
+            logger.warning(f"Invalid tick interval format: {interval_str}. Defaulting to 1000.") # WARNING: Invalid parameters
             self.ticks_per_bar = 1000
             
         self.current_bar: Optional[Candle] = None
@@ -66,7 +71,7 @@ class TickBarResampler:
         try:
             self.tz = ZoneInfo(timezone_str)
         except ZoneInfoNotFoundError:
-            logger.warning(f"Timezone '{timezone_str}' not found. Defaulting to UTC.")
+            logger.warning(f"Timezone '{timezone_str}' not found. Defaulting to UTC.") # WARNING: Invalid parameters
             self.tz = dt_timezone.utc
 
         self.last_completed_bar_timestamp: Optional[float] = None
@@ -78,6 +83,7 @@ class TickBarResampler:
             return None
 
         price, volume, ts_float = float(tick_data['price']), int(tick_data['volume']), tick_data['timestamp']
+        logger.debug(f"Processing tick: price={price}, volume={volume}, timestamp={ts_float}") # DEBUG: Tick processing details
         
         # Create a timezone-aware "fake UTC" timestamp for the frontend
         ts_utc = datetime.fromtimestamp(ts_float, tz=dt_timezone.utc)
@@ -265,17 +271,21 @@ class ConnectionManager:
             cached_ticks_str = await self.redis_client.lrange(cache_key, 0, -1)
             
             if not cached_ticks_str:
+                logger.warning(f"Missing data scenario: No cached ticks found for {conn_info.symbol}. Sending empty backfill.") # WARNING: Missing data scenarios
                 if websocket.client_state == WebSocketState.CONNECTED:
                     await websocket.send_json([])
                 return True
 
             ticks = [json.loads(t) for t in cached_ticks_str]
+            logger.debug(f"Cache operation: Loaded {len(ticks)} ticks from Redis cache for {conn_info.symbol}.") # DEBUG: Cache operations
             if not ticks:
+                logger.warning(f"Missing data scenario: Cached ticks for {conn_info.symbol} were empty after parsing. Sending empty backfill.") # WARNING: Missing data scenarios
                 if websocket.client_state == WebSocketState.CONNECTED:
                     await websocket.send_json([])
                 return True
 
             resampled_bars = await resample_ticks_to_bars(ticks, conn_info.interval, conn_info.timezone)
+            logger.debug(f"Data transformation step: Resampled {len(ticks)} ticks into {len(resampled_bars)} bars for {conn_info.symbol}/{conn_info.interval}.") # DEBUG: Data transformation steps
 
             if websocket.client_state != WebSocketState.CONNECTED:
                 logger.warning(f"Client disconnected during backfill processing for {conn_info.symbol}. Aborting send.")
@@ -283,10 +293,11 @@ class ConnectionManager:
 
             if resampled_bars:
                 payload = [bar.model_dump() for bar in resampled_bars]
-                logger.info(f"Sending {len(payload)} backfilled bars to client for {conn_info.symbol}/{conn_info.interval}")
+                logger.info(f"Data fetch completion: Sending {len(payload)} backfilled bars to client for {conn_info.symbol}/{conn_info.interval}") # INFO: Data fetch completions
                 await websocket.send_json(payload)
                 logger.info(f"Sent {len(payload)} backfilled bars to client for {conn_info.symbol}/{conn_info.interval}")
             else:
+                logger.warning(f"Missing data scenario: No resampled bars generated for {conn_info.symbol}/{conn_info.interval}. Sending empty backfill.") # WARNING: Missing data scenarios
                 await websocket.send_json([])
 
             return True
@@ -295,11 +306,12 @@ class ConnectionManager:
             logger.info(f"Could not send backfill to {conn_info.symbol}; client disconnected during the process.")
             return True
         except Exception as e:
-            logger.error(f"An unexpected error occurred sending backfill data for {conn_info.symbol}: {e}", exc_info=True)
+            logger.error(f"Critical data processing error: An unexpected error occurred sending backfill data for {conn_info.symbol}: {e}", exc_info=True) # ERROR: Critical data processing errors
             return False
 
     async def add_connection(self, websocket: WebSocket, symbol: str, interval: str, timezone: str) -> bool:
         """Add a new WebSocket connection. Returns False if the connection is terminated during setup."""
+        logger.info(f"New client connection: {symbol}/{interval} from {websocket.client.host}") # INFO: New client connections
         conn_info = ConnectionInfo(websocket, symbol, interval, timezone)
         self.connections[websocket] = conn_info
         
@@ -325,17 +337,18 @@ class ConnectionManager:
             logger.info(f"Connection for {symbol}/{interval} is now live.")
             return True
         else:
-            logger.warning(f"Did not add {symbol}/{interval} to live group; client disconnected during backfill.")
+            logger.warning(f"Did not add {symbol}/{interval} to live group; client disconnected during backfill.") # WARNING: Connection retries and fallbacks
             return False
 
     async def remove_connection(self, websocket: WebSocket):
         if websocket not in self.connections:
+            logger.warning(f"Attempted to remove non-existent connection: {websocket}") # WARNING: Connection retries and fallbacks
             return
         conn_info = self.connections.pop(websocket)
         group = self.subscription_groups.get(self._get_channel_key(conn_info.symbol))
         if group:
             group.connections.discard(websocket)
-            logger.info(f"Removed connection from group {group.symbol}")
+            logger.info(f"Client disconnected: Removed connection for {conn_info.symbol}/{conn_info.interval}. Remaining connections in group: {len(group.connections)}") # INFO: Client disconnections
 
     async def _start_redis_subscription(self, group: SubscriptionGroup):
         pubsub = self.redis_client.pubsub()
@@ -349,14 +362,14 @@ class ConnectionManager:
         logger.info(f"STARTING Redis message listener for channel: {group.channel}")
         try:
             async for message in pubsub.listen():
-                logger.debug(f"Received raw message from Redis on channel {group.channel}: {message}")
+                logger.debug(f"Raw Redis message: {message}") # DEBUG: Raw Redis messages
                 if message['type'] == 'message':
                     tick_data = json.loads(message['data'])
                     await self._process_tick_for_group(group, tick_data)
         except asyncio.CancelledError:
             logger.warning(f"Redis message listener for {group.channel} was cancelled.")
         except Exception as e:
-            logger.error(f"FATAL: Redis message listener for {group.channel} failed: {e}", exc_info=True)
+            logger.error(f"Service failures: Redis message listener for {group.channel} failed: {e}", exc_info=True) # ERROR: Service failures
         finally:
             logger.warning(f"STOPPED Redis message listener for channel: {group.channel}")
 
@@ -372,12 +385,15 @@ class ConnectionManager:
                 completed_bar = resampler.add_bar(tick_data)
                 current_bar = resampler.current_bar
                 
+                # DEBUG: Data transformation steps
+                logger.debug(f"Resampler {resampler_key} processed tick. Completed bar: {completed_bar is not None}, Current bar: {current_bar is not None}")
+                
                 payloads[resampler_key] = {
                     "completed_bar": completed_bar.model_dump() if completed_bar else None,
                     "current_bar": current_bar.model_dump() if current_bar else None
                 }
             except Exception as e:
-                logger.error(f"Error processing tick in resampler {resampler_key}: {e}", exc_info=True)
+                logger.error(f"Critical data processing error: Error processing tick in resampler {resampler_key}: {e}", exc_info=True) # ERROR: Critical data processing errors
                 continue
 
         tasks = []
@@ -388,6 +404,8 @@ class ConnectionManager:
             
             payload_key = (conn_info.interval, conn_info.timezone)
             if payload_key in payloads:
+                # DEBUG: Individual WebSocket message forwarding
+                logger.debug(f"Forwarding WebSocket message to client {websocket.client.host} for {conn_info.symbol}/{conn_info.interval}")
                 tasks.append(websocket.send_json(payloads[payload_key]))
         
         if tasks:
@@ -395,9 +413,9 @@ class ConnectionManager:
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     if isinstance(result, (WebSocketDisconnect, ConnectionClosed)):
-                        logger.warning(f"Failed to send update to a client, connection already closed.")
+                        logger.warning(f"WebSocket connection failure: Failed to send update to a client, connection already closed.") # ERROR: WebSocket connection failures
                     else:
-                        logger.error(f"Error sending data to client: {result}", exc_info=False)
+                        logger.error(f"WebSocket connection failure: Error sending data to client: {result}", exc_info=False) # ERROR: WebSocket connection failures
 
     async def _cleanup_loop(self):
         """Periodically clean up subscription groups with no active connections."""
@@ -483,14 +501,19 @@ async def health_check():
     redis_connected = True
     try:
         await connection_manager.redis_client.ping()
+        logger.info("Health check: Redis connection successful.") # INFO: Health check results
     except Exception:
         redis_connected = False
+        logger.error("Database connection failures: Redis connection failed during health check.") # ERROR: Database connection failures
     
     active_connections = len(connection_manager.connections)
     active_groups = len(connection_manager.subscription_groups)
     
+    status = "healthy" if redis_connected else "unhealthy"
+    logger.info(f"Health check result: {status}. Active connections: {active_connections}, Active groups: {active_groups}") # INFO: Health check results
+    
     return {
-        "status": "healthy" if redis_connected else "unhealthy",
+        "status": status,
         "redis_connected": redis_connected,
         "active_connections": active_connections,
         "active_subscription_groups": active_groups,

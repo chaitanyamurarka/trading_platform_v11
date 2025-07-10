@@ -42,8 +42,13 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.DEBUG) # Set to DEBUG to capture all levels
     root_logger.addHandler(console_handler)
+
+    # Add file handler
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
     return root_logger
 
 setup_logging()
@@ -101,7 +106,7 @@ class TickBarResampler:
         try:
             self.ticks_per_bar = int(interval_str.replace('tick', ''))
         except ValueError:
-            logger.error(f"Invalid tick interval format: {interval_str}. Defaulting to 1000.")
+            logger.warning(f"Invalid parameters with auto-correction: Invalid tick interval format: {interval_str}. Defaulting to 1000.") # WARNING: Invalid parameters with auto-correction
             self.ticks_per_bar = 1000
             
         self.current_bar: Optional[Candle] = None
@@ -109,7 +114,7 @@ class TickBarResampler:
         try:
             self.tz = ZoneInfo(timezone_str)
         except:
-            logger.warning(f"Timezone '{timezone_str}' not found. Defaulting to UTC.")
+            logger.warning(f"Invalid parameters with auto-correction: Timezone '{timezone_str}' not found. Defaulting to UTC.") # WARNING: Invalid parameters with auto-correction
             self.tz = dt_timezone.utc
 
         self.last_completed_bar_timestamp: Optional[float] = None
@@ -260,6 +265,7 @@ class LiveRegressionService:
         
     async def add_subscription(self, websocket, subscription: LiveRegressionSubscription) -> bool:
         """Add a new live regression subscription supporting multiple timeframes."""
+        logger.info(f"New client connection: Live regression subscription for {subscription.symbol} with timeframes: {subscription.timeframes}") # INFO: New client connections
         try:
             self.subscriptions[websocket] = subscription
             
@@ -296,15 +302,17 @@ class LiveRegressionService:
             return True
             
         except Exception as e:
-            logger.error(f"Error adding live regression subscription: {e}", exc_info=True)
+            logger.error(f"Service failures: Error adding live regression subscription: {e}", exc_info=True) # ERROR: Service failures
             return False
     
     async def remove_subscription(self, websocket):
         """Remove a live regression subscription."""
         if websocket not in self.subscriptions:
+            logger.warning(f"Connection retries and fallbacks: Attempted to remove non-existent subscription for websocket: {websocket}") # WARNING: Connection retries and fallbacks
             return
             
         subscription = self.subscriptions.pop(websocket)
+        logger.info(f"Client disconnection: Removing live regression subscription for {subscription.symbol} with {len(subscription.timeframes)} timeframes") # INFO: Client disconnections
         
         # Check each timeframe to see if we can clean up contexts
         for timeframe in subscription.timeframes:
@@ -319,15 +327,18 @@ class LiveRegressionService:
             if not remaining_subs:
                 # Clean up context and tasks for this timeframe
                 if context_key in self.calculation_contexts:
+                    logger.info(f"Cleanup operations: Deleting calculation context for {context_key}") # WARNING: Cleanup operations
                     del self.calculation_contexts[context_key]
                 
                 if context_key in self.calculation_tasks:
+                    logger.info(f"Cleanup operations: Cancelling calculation task for {context_key}") # WARNING: Cleanup operations
                     self.calculation_tasks[context_key].cancel()
                     del self.calculation_tasks[context_key]
         
         # Check if we can clean up Redis subscription for this symbol
         symbol_subs = [s for s in self.subscriptions.values() if s.symbol == subscription.symbol]
         if not symbol_subs and subscription.symbol in self.redis_subscriptions:
+            logger.info(f"Cleanup operations: Unsubscribing from Redis for symbol {subscription.symbol}") # WARNING: Cleanup operations
             pubsub = self.redis_subscriptions.pop(subscription.symbol)
             await pubsub.unsubscribe()
             await pubsub.close()
@@ -336,6 +347,7 @@ class LiveRegressionService:
     
     async def _load_historical_data(self, context: RegressionCalculationContext):
         """Load historical data from InfluxDB."""
+        logger.debug(f"Loading historical data for {context.symbol}:{context.interval}") # DEBUG: Tick processing details
         try:
             end_time = datetime.now(dt_timezone.utc)
             start_time = end_time - timedelta(days=30)
@@ -368,6 +380,7 @@ class LiveRegressionService:
                           |> sort(columns: ["_time"], desc: false)
                           |> limit(n: 2000)
                     """
+                    logger.debug(f"Detailed SQL/Flux query execution with full query text:{flux_query}") # DEBUG: Detailed SQL/Flux query execution
                     
                     try:
                         tables = query_api.query(query=flux_query)
@@ -397,10 +410,11 @@ class LiveRegressionService:
                         all_candles.extend(daily_candles)
                         
                         if len(all_candles) >= 1000:  # Enough data for live regression
+                            logger.debug(f"Data fetch completions: Reached 1000 historical candles for {context.symbol}:{context.interval}. Stopping early.") # INFO: Data fetch completions
                             break
                             
                     except Exception as e:
-                        logger.warning(f"Error querying day {day}: {e}")
+                        logger.warning(f"Missing data scenarios: Error querying day {day}: {e}") # WARNING: Missing data scenarios
                         continue
                 
                 context.historical_candles = sorted(all_candles, key=lambda c: c.unix_timestamp, reverse=True)
@@ -420,6 +434,7 @@ class LiveRegressionService:
                       |> sort(columns: ["_time"], desc: true)
                       |> limit(n: 1000)
                 """
+                logger.debug(f"Detailed SQL/Flux query execution with full query text:{flux_query}") # DEBUG: Detailed SQL/Flux query execution
                 
                 tables = query_api.query(query=flux_query)
                 candles = []
@@ -447,24 +462,28 @@ class LiveRegressionService:
                 
                 context.historical_candles = candles
             
-            logger.info(f"Loaded {len(context.historical_candles)} historical candles for {context.symbol}:{context.interval}")
+            logger.info(f"Data fetch completions: Loaded {len(context.historical_candles)} historical candles for {context.symbol}:{context.interval}") # INFO: Data fetch completions
                 
         except Exception as e:
-            logger.error(f"Error loading historical data for {context.symbol}: {e}", exc_info=True)
+            logger.error(f"Database connection failures: Error loading historical data for {context.symbol}: {e}", exc_info=True) # ERROR: Database connection failures
     
     async def _load_live_data(self, context: RegressionCalculationContext):
         """Load live tick data from Redis cache and resample to required interval."""
+        logger.debug(f"Loading live data for {context.symbol}:{context.interval}") # DEBUG: Tick processing details
         try:
             cache_key = f"intraday_ticks:{context.symbol}"
             cached_ticks_str = await self.redis_client.lrange(cache_key, 0, -1)
+            logger.debug(f"Cache operations: Fetched {len(cached_ticks_str)} cached ticks for {context.symbol}.") # DEBUG: Cache operations
             
             if cached_ticks_str:
                 ticks = [json.loads(t) for t in cached_ticks_str]
+                logger.debug(f"Data transformation steps: Parsed {len(ticks)} ticks from cached data for {context.symbol}.") # DEBUG: Data transformation steps
                 
                 # Resample ticks to the required interval
                 resampled_bars = await resample_ticks_to_bars(
                     ticks, context.interval, context.timezone
                 )
+                logger.debug(f"Data transformation steps: Resampled {len(ticks)} ticks into {len(resampled_bars)} bars for {context.symbol}:{context.interval}.") # DEBUG: Data transformation steps
                 
                 if resampled_bars:
                     # Sort by timestamp descending (newest first)
@@ -473,10 +492,10 @@ class LiveRegressionService:
                         key=lambda c: c.unix_timestamp,
                         reverse=True
                     )
-                    logger.info(f"Loaded {len(context.live_candles)} live candles for {context.symbol}:{context.interval}")
+                    logger.info(f"Data fetch completions: Loaded {len(context.live_candles)} live candles for {context.symbol}:{context.interval}") # INFO: Data fetch completions
                     
         except Exception as e:
-            logger.error(f"Error loading live data for {context.symbol}: {e}", exc_info=True)
+            logger.error(f"Critical data processing errors: Error loading live data for {context.symbol}: {e}", exc_info=True) # ERROR: Critical data processing errors
     
     async def _start_redis_subscription(self, symbol: str):
         """Start Redis subscription for live tick updates."""
@@ -499,13 +518,14 @@ class LiveRegressionService:
         """Handle incoming Redis messages for live tick updates."""
         try:
             async for message in pubsub.listen():
+                logger.debug(f"Raw Redis messages and tick processing details: Received raw message from Redis on channel {symbol}: {message}") # DEBUG: Raw Redis messages and tick processing details
                 if message['type'] == 'message':
                     tick_data = json.loads(message['data'])
                     await self._process_new_tick(symbol, tick_data)
         except asyncio.CancelledError:
             logger.info(f"Redis message handler for {symbol} was cancelled")
         except Exception as e:
-            logger.error(f"Error in Redis message handler for {symbol}: {e}", exc_info=True)
+            logger.error(f"Service failures: Error in Redis message handler for {symbol}: {e}", exc_info=True) # ERROR: Service failures
     
     async def _process_new_tick(self, symbol: str, tick_data: dict):
         """Process a new tick and update relevant calculation contexts for all timeframes."""
@@ -525,6 +545,7 @@ class LiveRegressionService:
                 resampled_bars = await resample_ticks_to_bars(
                     all_ticks, context.interval, context.timezone
                 )
+                logger.debug(f"Data transformation steps: Resampled {len(all_ticks)} ticks into {len(resampled_bars)} bars for {context_key}.") # DEBUG: Data transformation steps
                 
                 if resampled_bars:
                     context.live_candles = sorted(
@@ -536,7 +557,7 @@ class LiveRegressionService:
                     await self._calculate_and_broadcast_regression(context_key)
                     
             except Exception as e:
-                logger.error(f"Error processing tick for context {context_key}: {e}", exc_info=True)
+                logger.error(f"Critical data processing errors: Error processing tick for context {context_key}: {e}", exc_info=True) # ERROR: Critical data processing errors
     
     async def _start_calculation_task(self, context_key: str):
         """Start periodic regression calculation task."""
@@ -593,6 +614,7 @@ class LiveRegressionService:
                 closes = [c.close for c in reversed(candles_for_regression)]
                 
                 slope, intercept, r_value, p_value, std_err = stats.linregress(timestamps, closes)
+                logger.debug(f"Regression calculation intermediate steps: Calculated linregress for {context_key} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}") # DEBUG: Regression calculation intermediate steps
                 
                 results[str(lookback)] = {
                     "slope": slope,
@@ -602,9 +624,10 @@ class LiveRegressionService:
             
             await self._broadcast_results(context_key, results)
             context.last_calculation_time = datetime.now()
+            logger.info(f"Successful regression calculations: Live regression calculated for {context_key}") # INFO: Successful regression calculations
             
         except Exception as e:
-            logger.error(f"Error calculating regression for {context_key}: {e}", exc_info=True)
+            logger.error(f"Critical data processing errors: Error calculating regression for {context_key}: {e}", exc_info=True) # ERROR: Critical data processing errors
     
     async def _broadcast_results(self, context_key: str, results: dict):
         """Broadcast regression results to all subscribers interested in this timeframe."""
@@ -873,20 +896,27 @@ async def health_check():
     
     try:
         await live_regression_service.redis_client.ping()
+        logger.info("Health check results: Redis connection successful.") # INFO: Health check results
     except Exception:
         redis_connected = False
+        logger.error("Database connection failures: Redis connection failed during health check.") # ERROR: Database connection failures
     
     try:
         test_query = f'from(bucket: "{settings.INFLUX_BUCKET}") |> range(start: -1m) |> limit(n: 1)'
         query_api.query(query=test_query)
+        logger.info("Health check results: InfluxDB connection successful.") # INFO: Health check results
     except Exception:
         influx_connected = False
+        logger.error("Database connection failures: InfluxDB connection failed during health check.") # ERROR: Database connection failures
     
     active_subscriptions = len(live_regression_service.subscriptions)
     active_contexts = len(live_regression_service.calculation_contexts)
     
+    status = "healthy" if (redis_connected and influx_connected) else "unhealthy"
+    logger.info(f"Health check results: Service status: {status}, Redis connected: {redis_connected}, InfluxDB connected: {influx_connected}, Active subscriptions: {active_subscriptions}, Active contexts: {active_contexts}") # INFO: Health check results
+    
     return {
-        "status": "healthy" if (redis_connected and influx_connected) else "unhealthy",
+        "status": status,
         "redis_connected": redis_connected,
         "influx_connected": influx_connected,
         "active_subscriptions": active_subscriptions,

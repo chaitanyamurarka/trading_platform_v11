@@ -35,8 +35,13 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.DEBUG) # Set to DEBUG to capture all levels
     root_logger.addHandler(console_handler)
+
+    # Add file handler
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
     return root_logger
 
 setup_logging()
@@ -110,11 +115,12 @@ class HeikinAshiService:
     @staticmethod
     def _query_and_process_influx_data(flux_query: str, timezone_str: str) -> List[Candle]:
         """Helper to run a Flux query and convert results to Candle schemas."""
-        logger.info(f"Executing Flux Query:\n{flux_query}")
+        logger.debug(f"Executing Flux Query:\n{flux_query}") # DEBUG: Log full query text
         try:
             target_tz = ZoneInfo(timezone_str)
         except Exception:
             target_tz = ZoneInfo("UTC")
+            logger.warning(f"Invalid timezone '{timezone_str}' provided. Defaulting to UTC.") # WARNING: Invalid parameters
 
         tables = query_api.query(query=flux_query)
         candles = []
@@ -143,7 +149,7 @@ class HeikinAshiService:
                 ))
 
         candles.reverse()
-        logger.info(f"Processed {len(candles)} candles from InfluxDB")
+        logger.debug(f"Processed {len(candles)} candles from InfluxDB") # DEBUG: Tick processing details
         return candles
 
     @staticmethod
@@ -295,6 +301,7 @@ class HeikinAshiService:
             regular_candles, next_cursor_timestamp = HeikinAshiService._fetch_data_full_range(token, interval_val, start_utc, end_utc, timezone, INITIAL_FETCH_LIMIT)
 
         if not regular_candles:
+            logger.warning("Missing data scenario: No regular data available for Heikin Ashi calculation.") # WARNING: Missing data scenarios
             return HeikinAshiDataResponse(candles=[], is_partial=False, message="No data available for this range.", request_id=None)
         
         ha_candles = HeikinAshiService._calculate_heikin_ashi_chunk(regular_candles)
@@ -413,10 +420,10 @@ async def fetch_heikin_ashi_data(
             end_time=end_time,
             timezone=timezone
         )
-        logger.info(f"Returning Heikin Ashi data for {token}")
+        logger.info(f"Data fetch completion: Successfully fetched {len(data.candles)} Heikin Ashi data points for {token}/{interval.value}.") # INFO: Data fetch completions
         return data
     except Exception as e:
-        logger.error(f"Error fetching Heikin Ashi data: {e}", exc_info=True)
+        logger.error(f"Critical data processing error: Error fetching Heikin Ashi data for {token}/{interval.value}: {e}", exc_info=True) # ERROR: Critical data processing errors
         raise HTTPException(status_code=500, detail=f"Error fetching Heikin Ashi data: {str(e)}")
 
 @app.get("/heikin-ashi/chunk", response_model=HeikinAshiDataChunkResponse, tags=["Heikin Ashi Data"])
@@ -432,12 +439,12 @@ async def fetch_heikin_ashi_chunk(
             offset=offset,
             limit=limit
         )
-        logger.info(f"Returning Heikin Ashi data chunk for request_id {request_id}")
+        logger.info(f"Data fetch completion: Successfully fetched {len(data.candles)} Heikin Ashi data points for request_id {request_id}.") # INFO: Data fetch completions
         return data
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching Heikin Ashi chunk: {e}", exc_info=True)
+        logger.error(f"Critical data processing error: Error fetching Heikin Ashi chunk for request_id {request_id}: {e}", exc_info=True) # ERROR: Critical data processing errors
         raise HTTPException(status_code=500, detail=f"Error fetching Heikin Ashi chunk: {str(e)}")
 
 @app.get("/health", tags=["Health"])
@@ -448,12 +455,16 @@ async def health_check():
         # Test InfluxDB connection with a simple query
         test_query = f'from(bucket: "{settings.INFLUX_BUCKET}") |> range(start: -1m) |> limit(n: 1)'
         query_api.query(query=test_query)
+        logger.info("Health check: InfluxDB connection successful.") # INFO: Health check results
     except Exception as e:
         influx_connected = False
-        logger.error(f"InfluxDB connection test failed: {e}")
+        logger.error(f"Database connection failures: InfluxDB connection test failed: {e}") # ERROR: Database connection failures
+    
+    status = "healthy" if influx_connected else "unhealthy"
+    logger.info(f"Health check result: {status}. InfluxDB connected: {influx_connected}") # INFO: Health check results
     
     return {
-        "status": "healthy" if influx_connected else "unhealthy",
+        "status": status,
         "influx_connected": influx_connected,
         "service": "historical_heikin_ashi_data",
         "timestamp": datetime.now().isoformat()

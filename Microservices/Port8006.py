@@ -37,8 +37,13 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging.DEBUG) # Set to DEBUG to capture all levels
     root_logger.addHandler(console_handler)
+
+    # Add file handler
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
     return root_logger
 
 setup_logging()
@@ -108,11 +113,12 @@ class RegressionService:
     @staticmethod
     def _query_and_process_influx_data(flux_query: str, timezone_str: str) -> List[Candle]:
         """Helper to run a Flux query and convert results to Candle schemas."""
-        logger.info(f"Executing Flux Query for regression:\n{flux_query}")
+        logger.debug(f"Detailed SQL/Flux query execution with full query text:\n{flux_query}") # DEBUG: Detailed SQL/Flux query execution
         try:
             target_tz = ZoneInfo(timezone_str)
         except Exception:
             target_tz = ZoneInfo("UTC")
+            logger.warning(f"Invalid parameters with auto-correction: Timezone '{timezone_str}' not found. Defaulting to UTC.") # WARNING: Invalid parameters with auto-correction
 
         tables = query_api.query(query=flux_query)
         candles = []
@@ -141,7 +147,7 @@ class RegressionService:
                 ))
 
         candles.reverse()
-        logger.info(f"Processed {len(candles)} candles from InfluxDB for regression")
+        logger.debug(f"Processed {len(candles)} candles from InfluxDB for regression") # DEBUG: Tick processing details
         return candles
 
     @staticmethod
@@ -255,7 +261,7 @@ class RegressionService:
                 continue
 
             if not candles:
-                logger.warning(f"No candles found for {request.symbol} on timeframe {timeframe.value}")
+                logger.warning(f"Missing data scenarios: No candles found for {request.symbol} on timeframe {timeframe.value}") # WARNING: Missing data scenarios
                 continue
 
             # Sort candles by timestamp descending to easily get the latest
@@ -264,20 +270,20 @@ class RegressionService:
 
             for lookback in request.lookback_periods:
                 if lookback >= len(sorted_candles):
-                    logger.warning(f"Lookback period {lookback} exceeds available data ({len(sorted_candles)} candles)")
+                    logger.warning(f"Missing data scenarios: Lookback period {lookback} exceeds available data ({len(sorted_candles)} candles)") # WARNING: Missing data scenarios
                     continue
 
                 start_index = lookback
                 end_index = start_index + request.regression_length
 
                 if end_index > len(sorted_candles):
-                    logger.warning(f"Regression length {request.regression_length} with lookback {lookback} exceeds available data")
+                    logger.warning(f"Missing data scenarios: Regression length {request.regression_length} with lookback {lookback} exceeds available data") # WARNING: Missing data scenarios
                     continue
 
                 candles_for_regression = sorted_candles[start_index:end_index]
 
                 if len(candles_for_regression) < 2:
-                    logger.warning(f"Not enough candles for regression: {len(candles_for_regression)}")
+                    logger.warning(f"Missing data scenarios: Not enough candles for regression: {len(candles_for_regression)}") # WARNING: Missing data scenarios
                     continue
 
                 # Timestamps should be in ascending order for regression
@@ -286,6 +292,7 @@ class RegressionService:
 
                 try:
                     slope, intercept, r_value, p_value, std_err = stats.linregress(timestamps, closes)
+                    logger.debug(f"Regression calculation intermediate steps: Calculated linregress for {request.symbol} {timeframe.value} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}") # DEBUG: Regression calculation intermediate steps
                     
                     timeframe_results.results[str(lookback)] = RegressionResult(
                         slope=slope, 
@@ -293,7 +300,7 @@ class RegressionService:
                     )
                     logger.info(f"Calculated regression for {request.symbol} {timeframe.value} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}")
                 except Exception as e:
-                    logger.error(f"Error calculating regression for lookback {lookback}: {e}")
+                    logger.error(f"Critical data processing errors: Error calculating regression for lookback {lookback}: {e}") # ERROR: Critical data processing errors
                     continue
 
             if timeframe_results.results:
@@ -359,6 +366,8 @@ async def calculate_regression(request: RegressionRequest):
         
         if not results:
             logger.warning(f"No regression results found for {request.symbol}")
+        else:
+            logger.info(f"Successful regression calculations: Completed regression analysis for {request.symbol}. Found results for {len(results)} timeframes.") # INFO: Successful regression calculations
             
         response = RegressionResponse(request_params=request, regression_results=results)
         logger.info(f"Returning regression results for {request.symbol}: {len(results)} timeframes processed")
@@ -412,12 +421,16 @@ async def health_check():
         # Test InfluxDB connection with a simple query
         test_query = f'from(bucket: "{settings.INFLUX_BUCKET}") |> range(start: -1m) |> limit(n: 1)'
         query_api.query(query=test_query)
+        logger.info("Health check results: InfluxDB connection successful.") # INFO: Health check results
     except Exception as e:
         influx_connected = False
-        logger.error(f"InfluxDB connection test failed: {e}")
+        logger.error(f"Database connection failures: InfluxDB connection test failed: {e}") # ERROR: Database connection failures
+    
+    status = "healthy" if influx_connected else "unhealthy"
+    logger.info(f"Health check results: Service status: {status}, InfluxDB connected: {influx_connected}") # INFO: Health check results
     
     return {
-        "status": "healthy" if influx_connected else "unhealthy",
+        "status": status,
         "influx_connected": influx_connected,
         "service": "linear_regression",
         "timestamp": datetime.now().isoformat()
