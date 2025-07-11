@@ -1,8 +1,8 @@
 // frontend/src/services/indicator-service.js
-import { state } from '../utils/state.js';
-import { getDomElements } from '../utils/dom-elements.js';
-import { fetchRegressionData } from './api.js';
-import { populateRegressionTable, showToast } from '../utils/ui-helpers.js';
+import { state } from '../chart/state.js';
+import { getDomElements } from '../main/dom-elements.js';
+import { fetchRegressionData } from '../api/api.js';
+import { populateRegressionTable, showToast } from '../chart/ui-helpers.js';
 import { 
     connectToLiveRegression, 
     disconnectFromLiveRegression, 

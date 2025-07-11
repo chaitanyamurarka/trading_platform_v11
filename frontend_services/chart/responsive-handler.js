@@ -302,8 +302,8 @@ class ResponsiveHandler {
 }
 
 // Create singleton instance with explicit state/elements for micro-frontend readiness
-import { state } from './state.js';
-import { getDomElements } from './dom-elements.js';
+import { state } from '../chart/state.js';
+import { getDomElements } from '../main/dom-elements.js';
 export const responsiveHandler = new ResponsiveHandler(state, getDomElements());
 
 // Export helper functions

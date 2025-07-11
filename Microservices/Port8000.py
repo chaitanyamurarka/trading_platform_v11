@@ -131,12 +131,16 @@ app = FastAPI(
 
 # Static Files
 script_dir = os.path.dirname(__file__)
-frontend_dir = os.path.join(os.path.dirname(script_dir), "frontend")
+frontend_dir = os.path.join(os.path.dirname(script_dir), "frontend_services")
 
 if os.path.exists(frontend_dir):
-    app.mount("/src", StaticFiles(directory=os.path.join(frontend_dir, "src")), name="src")
+    app.mount("/main", StaticFiles(directory=os.path.join(frontend_dir, "main")), name="main")
     app.mount("/static", StaticFiles(directory=os.path.join(frontend_dir, "public", "static")), name="static")
     app.mount("/dist", StaticFiles(directory=os.path.join(frontend_dir, "dist")), name="dist")
+    app.mount("/chart", StaticFiles(directory=os.path.join(frontend_dir, "chart")), name="chart")
+    app.mount("/api", StaticFiles(directory=os.path.join(frontend_dir, "api")), name="api")
+    app.mount("/regression", StaticFiles(directory=os.path.join(frontend_dir, "regression")), name="regression")
+    # app.mount("/services", StaticFiles(directory=os.path.join(frontend_dir, "services")), name="services")
 
 # Middleware
 @app.middleware("http")

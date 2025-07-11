@@ -1,12 +1,12 @@
 // frontend/static/js/app/6-api-service.js
-import { getHistoricalDataUrl, getHistoricalDataChunkUrl, getHeikinAshiDataUrl, getHeikinAshiDataChunkUrl, fetchHeikinAshiData, fetchHeikinAshiChunk, fetchSymbols } from './api.js';
-import { state, constants } from '../utils/state.js';
-import { getDomElements } from '../utils/dom-elements.js';
-import { showToast, populateSymbolSelect } from '../utils/ui-helpers.js';
+import { getHistoricalDataUrl, getHistoricalDataChunkUrl, getHeikinAshiDataUrl, getHeikinAshiDataChunkUrl, fetchHeikinAshiData, fetchHeikinAshiChunk, fetchSymbols } from '../api/api.js';
+import { state, constants } from '../chart/state.js';
+import { getDomElements } from '../main/dom-elements.js';
+import { showToast, populateSymbolSelect } from '../chart/ui-helpers.js';
 
 const elements = getDomElements();
-import { connectToLiveDataFeed, connectToLiveHeikinAshiData, disconnectFromAllLiveFeeds, processMessageBuffer } from './websocket-service.js';
-import { applyAutoscaling } from '../utils/drawing-toolbar-listeners.js';
+import { connectToLiveDataFeed, connectToLiveHeikinAshiData, disconnectFromAllLiveFeeds, processMessageBuffer } from '../chart/websocket-service.js';
+import { applyAutoscaling } from '../chart/drawing-toolbar-listeners.js';
 
 // NEW: Function to fetch and populate symbols
 // Accept state and elements as arguments for symbol fetching and population

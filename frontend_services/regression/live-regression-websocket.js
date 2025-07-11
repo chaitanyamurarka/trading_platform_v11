@@ -1,7 +1,7 @@
 // frontend/src/services/live-regression-websocket.js
-import { state } from '../utils/state.js';
-import { getDomElements } from '../utils/dom-elements.js';
-import { showToast } from '../utils/ui-helpers.js';
+import { state } from '../chart/state.js';
+import { getDomElements } from '../main/dom-elements.js';
+import { showToast } from '../chart/ui-helpers.js';
 
 const elements = getDomElements();
 

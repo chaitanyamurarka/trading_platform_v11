@@ -1,8 +1,8 @@
 // frontend/static/js/app/10-session-manager.js
-import { initiateSession, sendHeartbeat } from './api.js';
-import { state } from '../utils/state.js';
-import { showToast } from '../utils/ui-helpers.js';
-import { fetchAndPopulateSymbols } from './api-service.js';
+import { initiateSession, sendHeartbeat } from '../api/api.js';
+import { state } from '../chart/state.js';
+import { showToast } from '../chart/ui-helpers.js';
+import { fetchAndPopulateSymbols } from '../api/api-service.js';
 
 // Accept state and elements as arguments for session management
 export async function startSession(stateObj, elementsObj) {

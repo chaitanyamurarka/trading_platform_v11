@@ -1,14 +1,14 @@
 // frontend/static/js/main.js
 // Pass state and elements explicitly to all major initializers for full decoupling
-import { state }  from '../utils/state.js';
-import { getDomElements } from '../utils/dom-elements.js';  
+import { state }  from '../chart/state.js';
+import { getDomElements } from '../main/dom-elements.js';  
 const elements = getDomElements();
-import { getChartTheme } from '../utils/chart-options.js';  
-import { syncSettingsInputs, updateThemeToggleIcon, setAutomaticDateTime } from '../utils/ui-helpers.js';
-import { recreateMainSeries, applySeriesColors, applyVolumeColors } from '../components/chart-drawing.js';
-import { startSession } from '../services/session-manager.js';
-import { initializeAllEventListeners } from '../utils/event-listeners.js';
-import { responsiveHandler } from '../utils/responsive-handler.js';
+import { getChartTheme } from '../chart/chart-options.js';  
+import { syncSettingsInputs, updateThemeToggleIcon, setAutomaticDateTime } from '../chart/ui-helpers.js';
+import { recreateMainSeries, applySeriesColors, applyVolumeColors } from '../chart/chart-drawing.js';
+import { startSession } from '../api/session-manager.js';
+import { initializeAllEventListeners } from '../chart/event-listeners.js';
+import { responsiveHandler } from '../chart/responsive-handler.js';
 
 function initializeNewChartObject() {
     if (state.mainChart) state.mainChart.remove();

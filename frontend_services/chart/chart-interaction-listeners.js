@@ -1,11 +1,11 @@
 // frontend/static/js/app/12-chart-interaction-listeners.js
-import { state } from './state.js';
-import { getDomElements } from './dom-elements.js';
+import { state } from '../chart/state.js';
+import { getDomElements } from '../main/dom-elements.js';
 
 const elements = getDomElements();
 import { fetchAndPrependHeikinAshiChunk, 
     fetchAndPrependTickChunk, 
-    fetchAndPrependRegularCandleChunk } from '../services/api-service.js';
+    fetchAndPrependRegularCandleChunk } from '../api/api-service.js';
 
 function formatPrice(price, decimals = 2) {
     if (price === null || price === undefined) return 'N/A';

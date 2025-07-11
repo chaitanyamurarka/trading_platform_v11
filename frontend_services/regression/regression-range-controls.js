@@ -1,6 +1,6 @@
-import { getDomElements } from './dom-elements.js';
-import { state } from './state.js';
-import { showToast } from './ui-helpers.js';
+import { getDomElements } from '../main/dom-elements.js';
+import { state } from '../chart/state.js';
+import { showToast } from '../chart/ui-helpers.js';
 
 const elements = getDomElements();
 

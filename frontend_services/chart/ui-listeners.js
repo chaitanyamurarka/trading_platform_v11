@@ -1,16 +1,16 @@
 // frontend/src/utils/ui-listeners.js
-import { getDomElements } from './dom-elements.js';
+import { getDomElements } from '../main/dom-elements.js';
 
 const elements = getDomElements();
-import { state } from './state.js';
-import { applyTheme, syncSettingsInputs, showToast, setAutomaticDateTime } from './ui-helpers.js';
-import { takeScreenshot, recreateMainSeries, applySeriesColors, applyVolumeColors } from '../components/chart-drawing.js';
-import { loadChartData } from '../services/api-service.js';
-import { connectToLiveDataFeed, connectToLiveHeikinAshiData, disconnectFromAllLiveFeeds } from '../services/websocket-service.js';
+import { state } from '../chart/state.js';
+import { applyTheme, syncSettingsInputs, showToast, setAutomaticDateTime } from '../chart/ui-helpers.js';
+import { takeScreenshot, recreateMainSeries, applySeriesColors, applyVolumeColors } from '../chart/chart-drawing.js';
+import { loadChartData } from '../api/api-service.js';
+import { connectToLiveDataFeed, connectToLiveHeikinAshiData, disconnectFromAllLiveFeeds } from '../chart/websocket-service.js';
 import { 
     handleLiveModeToggle, 
     disconnectFromLiveRegressionIfConnected 
-} from '../services/indicator-service.js';
+} from '../regression/indicator-service.js';
 
 export function setupUiListeners() {
     // --- MODIFICATION START ---

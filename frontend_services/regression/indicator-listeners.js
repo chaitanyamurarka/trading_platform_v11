@@ -1,17 +1,17 @@
 // frontend/src/utils/indicator-listeners.js
-import { getDomElements } from './dom-elements.js';
+import { getDomElements } from '../main/dom-elements.js';
 
 const elements = getDomElements();
-import { state } from './state.js';
+import { state } from '../chart/state.js';
 import { 
     runRegressionAnalysis, 
     removeRegressionAnalysis,
     handleLiveModeToggle,
     handleSymbolChangeForLiveRegression,
     toggleLiveRegression
-} from '../services/indicator-service.js';
+} from '../regression/indicator-service.js';
 
-import { initializeRegressionRangeControls, applyRegressionPreset } from './regression-range-controls.js';
+import { initializeRegressionRangeControls, applyRegressionPreset } from '../regression/regression-range-controls.js';
 
 export function setupIndicatorListeners() {
     // Existing Apply button listener

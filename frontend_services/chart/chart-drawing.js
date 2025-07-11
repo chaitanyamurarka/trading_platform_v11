@@ -1,9 +1,9 @@
 // frontend/static/js/app/5-chart-drawing.js
-import { state } from '../utils/state.js';
-import { getDomElements } from '../utils/dom-elements.js';
+import { state } from '../chart/state.js';
+import { getDomElements } from '../main/dom-elements.js';
 
 const elements = getDomElements();
-import { getSeriesOptions } from '../utils/chart-options.js';
+import { getSeriesOptions } from '../chart/chart-options.js';
 
 // Accept state and elements as arguments for better decoupling
 export function recreateMainSeries(type, stateObj, elementsObj) {
