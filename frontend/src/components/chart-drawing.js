@@ -5,55 +5,58 @@ import { getDomElements } from '../utils/dom-elements.js';
 const elements = getDomElements();
 import { getSeriesOptions } from '../utils/chart-options.js';
 
-export function recreateMainSeries(type) {
-    if (state.mainSeries) {
-        state.mainChart.removeSeries(state.mainSeries);
+// Accept state and elements as arguments for better decoupling
+export function recreateMainSeries(type, stateObj, elementsObj) {
+    const stateRef = stateObj || state;
+    const elementsRef = elementsObj || elements;
+    if (stateRef.mainSeries) {
+        stateRef.mainChart.removeSeries(stateRef.mainSeries);
     }
     const seriesOptions = getSeriesOptions();
     switch (type) {
         case 'bar':
-            state.mainSeries = state.mainChart.addBarSeries(seriesOptions);
+            stateRef.mainSeries = stateRef.mainChart.addBarSeries(seriesOptions);
             break;
         case 'line':
-            state.mainSeries = state.mainChart.addLineSeries({ color: seriesOptions.upColor });
+            stateRef.mainSeries = stateRef.mainChart.addLineSeries({ color: seriesOptions.upColor });
             break;
         case 'area':
-            state.mainSeries = state.mainChart.addAreaSeries({ lineColor: seriesOptions.upColor, topColor: `${seriesOptions.upColor}66`, bottomColor: `${seriesOptions.upColor}00` });
+            stateRef.mainSeries = stateRef.mainChart.addAreaSeries({ lineColor: seriesOptions.upColor, topColor: `${seriesOptions.upColor}66`, bottomColor: `${seriesOptions.upColor}00` });
             break;
         default:
-            state.mainSeries = state.mainChart.addCandlestickSeries(seriesOptions);
+            stateRef.mainSeries = stateRef.mainChart.addCandlestickSeries(seriesOptions);
             break;
     }
-    
-    // --- FIX START ---
     // Use the state helper to get the correct data array for the currently active chart type.
-    const currentData = state.getCurrentChartData();
+    const currentData = stateRef.getCurrentChartData ? stateRef.getCurrentChartData() : state.getCurrentChartData();
     if (currentData.length > 0) {
-        state.mainSeries.setData(currentData);
+        stateRef.mainSeries.setData(currentData);
     }
-    // --- FIX END ---
 }
 
 
-export function applySeriesColors() {
-    if (!state.mainSeries) return;
+export function applySeriesColors(stateObj, elementsObj) {
+    const stateRef = stateObj || state;
+    const elementsRef = elementsObj || elements;
+    if (!stateRef.mainSeries) return;
     
     // Always recreate the series to ensure wick changes take effect
-    recreateMainSeries(elements.chartTypeSelect.value);
+    recreateMainSeries(elementsRef.chartTypeSelect.value, stateRef, elementsRef);
 }
 
-export function applyVolumeColors() {
-    if (!state.volumeSeries || !state.allChartData.length || !state.allVolumeData.length) return;
+export function applyVolumeColors(stateObj, elementsObj) {
+    const stateRef = stateObj || state;
+    if (!stateRef.volumeSeries || !stateRef.allChartData.length || !stateRef.allVolumeData.length) return;
     const priceActionMap = new Map();
-    state.allChartData.forEach(priceData => {
+    stateRef.allChartData.forEach(priceData => {
         priceActionMap.set(priceData.time, priceData.close >= priceData.open);
     });
-    const newVolumeData = state.allVolumeData.map(volumeData => ({
+    const newVolumeData = stateRef.allVolumeData.map(volumeData => ({
         ...volumeData,
         color: priceActionMap.get(volumeData.time) ? elements.volUpColorInput.value + '80' : elements.volDownColorInput.value + '80',
     }));
-    state.allVolumeData = newVolumeData;
-    state.volumeSeries.setData(state.allVolumeData);
+    stateRef.allVolumeData = newVolumeData;
+    stateRef.volumeSeries.setData(stateRef.allVolumeData);
 }
 
 // --- MODIFIED: Corrected takeScreenshot function ---

@@ -6,10 +6,13 @@ import { setupIndicatorListeners } from './indicator-listeners.js'; // NEW
 /**
  * Initializes all event listeners for the application.
  */
-export function initializeAllEventListeners() {
-    setupUiListeners();
-    setupChartInteractionListeners();
-    setupChartInfiniteScroll();
-    setupDrawingToolbarListeners();
-    setupIndicatorListeners(); // NEW
+export function initializeAllEventListeners(stateObj, elementsObj) {
+    const stateRef = stateObj || state;
+    const elementsRef = elementsObj || getDomElements();
+
+    setupUiListeners(stateRef, elementsRef);
+    setupChartInteractionListeners(stateRef, elementsRef);
+    setupChartInfiniteScroll(stateRef, elementsRef);
+    setupDrawingToolbarListeners(stateRef, elementsRef);
+    setupIndicatorListeners(stateRef, elementsRef); // NEW
 }

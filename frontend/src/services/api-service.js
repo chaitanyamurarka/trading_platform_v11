@@ -9,16 +9,19 @@ import { connectToLiveDataFeed, connectToLiveHeikinAshiData, disconnectFromAllLi
 import { applyAutoscaling } from '../utils/drawing-toolbar-listeners.js';
 
 // NEW: Function to fetch and populate symbols
-export async function fetchAndPopulateSymbols() {
+// Accept state and elements as arguments for symbol fetching and population
+export async function fetchAndPopulateSymbols(stateObj, elementsObj) {
+    const stateRef = stateObj || state;
+    const elementsRef = elementsObj || getDomElements();
     try {
         const symbols = await fetchSymbols();
-        state.availableSymbols = symbols;
-        populateSymbolSelect(symbols);
+        stateRef.availableSymbols = symbols;
+        populateSymbolSelect(symbols, elementsRef);
         showToast(`Loaded ${symbols.length} symbols.`, 'success');
 
         // Only load chart data if there are symbols available
         if (symbols && symbols.length > 0) {
-            loadChartData();
+            loadChartData(stateRef, elementsRef);
         } else {
             showToast('No symbols available to load chart.', 'warning');
         }

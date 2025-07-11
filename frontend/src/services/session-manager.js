@@ -4,20 +4,23 @@ import { state } from '../utils/state.js';
 import { showToast } from '../utils/ui-helpers.js';
 import { fetchAndPopulateSymbols } from './api-service.js';
 
-export async function startSession() {
+// Accept state and elements as arguments for session management
+export async function startSession(stateObj, elementsObj) {
+    const stateRef = stateObj || state;
+    const elementsRef = elementsObj || getDomElements();
     try {
         const sessionData = await initiateSession();
-        state.sessionToken = sessionData.session_token;
+        stateRef.sessionToken = sessionData.session_token;
         showToast('Session started.', 'info');
 
         // Fetch symbols and load chart data now that we have a session token.
-        await fetchAndPopulateSymbols();
+        await fetchAndPopulateSymbols(stateRef, elementsRef);
 
         // Start heartbeat to keep the session alive
-        if (state.heartbeatIntervalId) clearInterval(state.heartbeatIntervalId);
-        state.heartbeatIntervalId = setInterval(() => {
-            if (state.sessionToken) {
-                sendHeartbeat(state.sessionToken).catch(e => console.error('Heartbeat failed', e));
+        if (stateRef.heartbeatIntervalId) clearInterval(stateRef.heartbeatIntervalId);
+        stateRef.heartbeatIntervalId = setInterval(() => {
+            if (stateRef.sessionToken) {
+                sendHeartbeat(stateRef.sessionToken).catch(e => console.error('Heartbeat failed', e));
             }
         }, 60000); // every minute
 

@@ -6,8 +6,9 @@ import { state } from './state.js';
 const elements = getDomElements();
 
 
-export function setAutomaticDateTime() {
-    const selectedTimezone = elements.timezoneSelect.value || 'America/New_York';
+export function setAutomaticDateTime(elementsObj) {
+    const elementsRef = elementsObj || getDomElements();
+    const selectedTimezone = elementsRef.timezoneSelect.value || 'America/New_York';
 
     const now = new Date();
     const nyParts = getDatePartsInZone(now, 'America/New_York');
@@ -37,8 +38,8 @@ export function setAutomaticDateTime() {
     const startFormatted = formatDateInZone(finalStartUTC, selectedTimezone);
     const endFormatted = formatDateInZone(finalEndUTC, selectedTimezone);
 
-    elements.startTimeInput.value = startFormatted;
-    elements.endTimeInput.value = endFormatted;
+    elementsRef.startTimeInput.value = startFormatted;
+    elementsRef.endTimeInput.value = endFormatted;
 
     console.log(`[${selectedTimezone}] Start: ${startFormatted}, End: ${endFormatted}`);
 }
@@ -128,20 +129,23 @@ export function applyTheme(theme) {
     syncSettingsInputs();
 }
 
-export function syncSettingsInputs() {
+export function syncSettingsInputs(stateObj, elementsObj) {
+    const stateRef = stateObj || state;
+    const elementsRef = elementsObj || getDomElements();
     const currentTheme = getChartTheme(localStorage.getItem('chartTheme') || 'light');
-    elements.gridColorInput.value = currentTheme.grid.vertLines.color;
-    elements.upColorInput.value = '#10b981';
-    elements.downColorInput.value = '#ef4444';
-    elements.wickUpColorInput.value = '#10b981';
-    elements.wickDownColorInput.value = '#ef4444';
-    elements.volUpColorInput.value = '#10b981';
-    elements.volDownColorInput.value = '#ef4444';
+    elementsRef.gridColorInput.value = currentTheme.grid.vertLines.color;
+    elementsRef.upColorInput.value = '#10b981';
+    elementsRef.downColorInput.value = '#ef4444';
+    elementsRef.wickUpColorInput.value = '#10b981';
+    elementsRef.wickDownColorInput.value = '#ef4444';
+    elementsRef.volUpColorInput.value = '#10b981';
+    elementsRef.volDownColorInput.value = '#ef4444';
 }
 
-export function updateThemeToggleIcon() {
+export function updateThemeToggleIcon(elementsObj) {
+    const elementsRef = elementsObj || getDomElements();
     const theme = document.documentElement.getAttribute('data-theme');
-    const toggleCheckbox = elements.themeToggle.querySelector('input[type="checkbox"]');
+    const toggleCheckbox = elementsRef.themeToggle.querySelector('input[type="checkbox"]');
     
     if (toggleCheckbox) {
         // The "swap-on" (sun icon) should be active when the theme is dark.
@@ -150,9 +154,10 @@ export function updateThemeToggleIcon() {
     }
 }
 
-export function populateSymbolSelect(symbols) {
+export function populateSymbolSelect(symbols, elementsObj) {
+    const elementsRef = elementsObj || getDomElements();
     // Clear existing options
-    elements.symbolSelect.innerHTML = '';
+    elementsRef.symbolSelect.innerHTML = '';
 
     // Add a default, disabled option
     const defaultOption = document.createElement('option');
@@ -160,19 +165,19 @@ export function populateSymbolSelect(symbols) {
     defaultOption.textContent = 'Select Symbol';
     defaultOption.disabled = true;
     defaultOption.selected = true;
-    elements.symbolSelect.appendChild(defaultOption);
+    elementsRef.symbolSelect.appendChild(defaultOption);
 
     // Add symbols from the fetched list
     symbols.forEach(s => {
         const option = document.createElement('option');
         option.value = s.symbol; // Assuming 'symbol' is the key for the symbol string
         option.textContent = s.symbol; // Display the symbol string
-        elements.symbolSelect.appendChild(option);
+        elementsRef.symbolSelect.appendChild(option);
     });
 
     // Automatically select the first symbol if available
     if (symbols.length > 0) {
-        elements.symbolSelect.value = symbols[0].symbol;
+        elementsRef.symbolSelect.value = symbols[0].symbol;
         // Dispatch a change event to trigger any listeners (e.g., data loading)
         // elements.symbolSelect.dispatchEvent(new Event('change'));
     }

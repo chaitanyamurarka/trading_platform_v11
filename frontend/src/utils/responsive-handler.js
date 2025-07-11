@@ -1,20 +1,19 @@
 // frontend/static/js/app/8-responsive-handler.js
 
-import { state } from './state.js';
-import { getDomElements } from './dom-elements.js';
-
 /**
  * Advanced responsive handler for TradingView-style dynamic adaptation
  */
 class ResponsiveHandler {
-    constructor() {
+    // Accept state and elements as constructor arguments for decoupling
+    constructor(stateObj, elementsObj) {
+        this.state = stateObj || null;
+        this.elements = elementsObj || null;
         this.isInitialized = false;
         this.resizeTimeout = null;
         this.observerTimeout = null;
         this.lastKnownSize = { width: 0, height: 0 };
         this.mediaQueries = new Map();
         this.callbacks = new Set();
-        this.elements = getDomElements(); // Get DOM elements once
         
         this.init();
     }
@@ -105,7 +104,7 @@ class ResponsiveHandler {
     }
     
     handleChartResize(rect) {
-        if (!state.mainChart || !rect) return;
+        if (!this.state.mainChart || !rect) return;
         
         const { width, height } = rect;
         
@@ -124,7 +123,7 @@ class ResponsiveHandler {
         const finalHeight = Math.max(height, minHeight);
         
         try {
-            state.mainChart.resize(finalWidth, finalHeight, true);
+            this.state.mainChart.resize(finalWidth, finalHeight, true);
             this.notifyCallbacks('chartResize', { width: finalWidth, height: finalHeight });
         } catch (error) {
             console.error('Error resizing chart:', error);
@@ -302,8 +301,10 @@ class ResponsiveHandler {
     }
 }
 
-// Create singleton instance
-export const responsiveHandler = new ResponsiveHandler();
+// Create singleton instance with explicit state/elements for micro-frontend readiness
+import { state } from './state.js';
+import { getDomElements } from './dom-elements.js';
+export const responsiveHandler = new ResponsiveHandler(state, getDomElements());
 
 // Export helper functions
 export function getViewportInfo() {
