@@ -144,7 +144,7 @@ class ResponsiveHandler {
     }
     
     handleBreakpointChange(breakpoint) {
-        document.body.setAttribute('data-breakpoint', breakpoint);
+        setBodyBreakpointAttribute(breakpoint);
         this.updateResponsiveClasses();
         
         // Trigger resize after breakpoint change
@@ -165,7 +165,7 @@ class ResponsiveHandler {
     
     handleFullscreenChange() {
         const isFullscreen = !!document.fullscreenElement;
-        document.body.classList.toggle('fullscreen-mode', isFullscreen);
+        setFullscreenModeClass(isFullscreen);
         
         setTimeout(() => {
             this.handleWindowResize();
@@ -187,23 +187,7 @@ class ResponsiveHandler {
     updateResponsiveClasses() {
         const width = window.innerWidth;
         const height = window.innerHeight;
-        
-        // Update responsive classes on body
-        document.body.classList.toggle('mobile-view', width < 640);
-        document.body.classList.toggle('tablet-view', width >= 640 && width < 1024);
-        document.body.classList.toggle('desktop-view', width >= 1024);
-        document.body.classList.toggle('landscape-view', width > height);
-        document.body.classList.toggle('portrait-view', width <= height);
-
-        // --- NEW: Add classes based on vertical height for more granular control ---
-        document.body.classList.toggle('height-short', height < 600);
-        document.body.classList.toggle('height-medium', height >= 600 && height < 800);
-        document.body.classList.toggle('height-tall', height >= 800);
-        
-        // Update CSS custom properties
-        document.documentElement.style.setProperty('--viewport-width', `${width}px`);
-        document.documentElement.style.setProperty('--viewport-height', `${height}px`);
-        document.documentElement.style.setProperty('--aspect-ratio', `${width / height}`);
+        updateResponsiveClassesOnBody(width, height);
     }
     
     getMinChartWidth() {
@@ -304,6 +288,7 @@ class ResponsiveHandler {
 // Create singleton instance with explicit state/elements for micro-frontend readiness
 import { state } from '../chart/state.js';
 import { getDomElements } from '../main/dom-elements.js';
+import { updateResponsiveClassesOnBody, setBodyBreakpointAttribute, setFullscreenModeClass } from './ui-helpers.js';
 export const responsiveHandler = new ResponsiveHandler(state, getDomElements());
 
 // Export helper functions

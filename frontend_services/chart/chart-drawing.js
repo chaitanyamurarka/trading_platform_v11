@@ -4,6 +4,7 @@ import { getDomElements } from '../main/dom-elements.js';
 
 const elements = getDomElements();
 import { getSeriesOptions } from '../chart/chart-options.js';
+import { downloadChartScreenshot } from './ui-helpers.js';
 
 // Accept state and elements as arguments for better decoupling
 export function recreateMainSeries(type, stateObj, elementsObj) {
@@ -64,10 +65,5 @@ export function takeScreenshot() {
     if (!state.mainChart) return;
     // The takeScreenshot() method returns a canvas element directly, not a promise.
     const canvas = state.mainChart.takeScreenshot();
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL();
-    link.download = `chart-screenshot-${new Date().toISOString()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadChartScreenshot(canvas);
 }

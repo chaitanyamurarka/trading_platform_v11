@@ -441,3 +441,49 @@ function addTableScrollControls(sortedLookbackPeriods, maxVisibleSlopes) {
     // Initial display update
     updateDisplay();
 }
+
+/**
+ * Helper to handle chart screenshot download DOM manipulation
+ * @param {HTMLCanvasElement} canvas - The canvas element to download
+ * @param {string} [filename] - Optional filename for the screenshot
+ */
+export function downloadChartScreenshot(canvas, filename) {
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL();
+    link.download = filename || `chart-screenshot-${new Date().toISOString()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+/**
+ * Helper to update responsive classes on body and CSS custom properties
+ */
+export function updateResponsiveClassesOnBody(width, height) {
+    document.body.classList.toggle('mobile-view', width < 640);
+    document.body.classList.toggle('tablet-view', width >= 640 && width < 1024);
+    document.body.classList.toggle('desktop-view', width >= 1024);
+    document.body.classList.toggle('landscape-view', width > height);
+    document.body.classList.toggle('portrait-view', width <= height);
+    document.body.classList.toggle('height-short', height < 600);
+    document.body.classList.toggle('height-medium', height >= 600 && height < 800);
+    document.body.classList.toggle('height-tall', height >= 800);
+    document.documentElement.style.setProperty('--viewport-width', `${width}px`);
+    document.documentElement.style.setProperty('--viewport-height', `${height}px`);
+    document.documentElement.style.setProperty('--aspect-ratio', `${width / height}`);
+}
+
+/**
+ * Helper to set data-breakpoint attribute on body
+ */
+export function setBodyBreakpointAttribute(breakpoint) {
+    document.body.setAttribute('data-breakpoint', breakpoint);
+}
+
+/**
+ * Helper to toggle fullscreen mode class on body
+ */
+export function setFullscreenModeClass(isFullscreen) {
+    document.body.classList.toggle('fullscreen-mode', isFullscreen);
+}
