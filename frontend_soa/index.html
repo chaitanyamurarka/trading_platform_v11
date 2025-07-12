@@ -42,12 +42,17 @@
                                 <option value="1s">1 Second</option>
                                 <option value="5s">5 Seconds</option>
                                 <option value="10s">10 Seconds</option>
+                                <option value="15s">15 Seconds</option>
                                 <option value="30s">30 Seconds</option>
+                                <option value="45s">45 Seconds</option>
                             </optgroup>
                             <optgroup label="Minutes">
                                 <option value="1m" selected>1 Minute</option>
                                 <option value="5m">5 Minutes</option>
+                                <option value="10m">10 Minutes</option>
                                 <option value="15m">15 Minutes</option>
+                                <option value="30m">30 Minutes</option>
+                                <option value="45m">45 Minutes</option>
                             </optgroup>
                              <optgroup label="Hours & Days">
                                 <option value="1h">1 Hour</option>
@@ -79,7 +84,9 @@
                     </div>
                     <select id="timezone" class="select select-bordered select-sm">
                         <option value="Etc/UTC">UTC</option>
+                        <option value="Europe/London">London</option>
                         <option value="America/New_York" selected>New York</option>
+                        <option value="Asia/Kolkata">Kolkata</option>
                     </select>
                     <div class="form-control">
                         <select id="candle-type-select" class="select select-bordered select-sm">
@@ -90,12 +97,15 @@
                     <select id="chart-type" class="select select-bordered select-sm">
                         <option value="candlestick" selected>Candlestick</option>
                         <option value="bar">Bar</option>
+                        <option value="line">Line</option>
+                        <option value="area">Area</option>
                     </select>
                     <button id="screenshot-btn" class="btn btn-sm btn-ghost"><i class="fas fa-camera"></i></button>
                     <button id="indicator-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-chart-bar"></i> Indicators</button>
                     <button id="settings-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-cog"></i></button>
                 </div>
-                <!-- FIX: Added the theme toggle back -->
+                
+                <!-- Theme Toggle -->
                 <label class="swap swap-rotate" id="theme-toggle">
                     <input type="checkbox" />
                     <svg class="swap-on fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29l.71-.71A1,1,0,0,0,6.34,4.93l-.71.71A1,1,0,0,0,5.64,7.05ZM18.36,16.95a1,1,0,0,0-.7-1.71H16.91a1,1,0,0,0,0,2h.75a1,1,0,0,0,.7-1.71ZM12,18a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V19A1,1,0,0,0,12,18Zm5.36-1.64a1,1,0,0,0-.71.29l-.71.71a1,1,0,1,0,1.41,1.41l.71-.71A1,1,0,0,0,17.36,16.36ZM20,11H19a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Z"/></svg>
@@ -115,30 +125,119 @@
                 </div>
             </div>
 
-            <!-- Drawing Toolbar -->
-            <div id="drawing-toolbar" class="flex items-center justify-center gap-2 p-2 bg-base-100">
-                <!-- ... drawing buttons ... -->
-            </div>
+            <!-- Drawing Toolbar will be inserted here dynamically -->
 
             <!-- Regression Table -->
             <div id="regression-table-container" class="p-4 bg-base-100 hidden">
-                 <h3 class="font-bold text-lg">Linear Regression Analysis</h3>
+                 <div class="flex items-center gap-3 mb-3">
+                    <h3 class="font-bold text-lg text-base-content">Linear Regression Analysis</h3>
+                    <div class="flex-1"></div>
+                    <button id="remove-regression-btn" class="btn btn-xs btn-ghost text-error opacity-60 hover:opacity-100" title="Remove Analysis">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
                 <div class="overflow-x-auto max-h-80">
                     <table id="regression-table" class="table table-zebra table-pin-rows table-sm w-full">
                         <thead></thead>
-                        <tbody></tbody>
+                        <tbody>
+                            <tr>
+                                <td colspan="3" class="text-center p-4 text-base-content/60">
+                                    No indicators applied. Use the 'Indicators' button to run an analysis.
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Modals -->
-    <dialog id="settings_modal" class="modal"> <!-- ... modal content ... --> </dialog>
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Settings Modal -->
+    <dialog id="settings_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-2xl">
+            <h3 class="font-bold text-lg">Chart Settings</h3>
+            <div class="tabs tabs-boxed my-4">
+                <a class="tab tab-active" data-tab="chart-settings-tab">Chart</a>
+                <a class="tab" data-tab="series-settings-tab">Series</a>
+            </div>
+            
+            <div class="space-y-4 tab-content" id="chart-settings-tab">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Grid Color</span></label>
+                    <input type="color" id="setting-grid-color" class="input input-sm">
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Watermark Text</span></label>
+                    <input type="text" id="setting-watermark-text" class="input input-sm input-bordered">
+                </div>
+            </div>
+
+            <div class="space-y-4 tab-content hidden" id="series-settings-tab">
+                <p class="font-bold">Candlestick/Bar Colors</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Up Color</span></label>
+                        <input type="color" id="setting-up-color" class="input input-sm">
+                    </div>
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Down Color</span></label>
+                        <input type="color" id="setting-down-color" class="input input-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <!-- Indicator Modal -->
     <dialog id="indicator_modal" class="modal">
-        <div class="modal-box">
+        <div class="modal-box w-11/12 max-w-2xl">
             <h3 class="font-bold text-lg">Indicator Settings</h3>
-            <p class="py-4">Press ESC key or click the button below to close</p>
+            <div class="py-4 space-y-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Indicator</span></label>
+                    <select id="indicator-select" class="select select-bordered select-sm">
+                        <option value="linear_regression" selected>Linear Regression</option>
+                    </select>
+                </div>
+                
+                <div id="linear-regression-settings">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Regression Length</span></label>
+                        <input type="number" id="indicator-regression-length" value="10" min="2" max="1000" class="input input-bordered input-sm">
+                        <label class="label">
+                            <span class="label-text-alt">Number of candles to use for regression calculation (2-1000)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Lookback Periods</span></label>
+                        <input type="text" id="indicator-lookback-periods" value="0,1,2,3,5" class="input input-bordered input-sm">
+                        <label class="label">
+                            <span class="label-text-alt">Comma-separated list of lookback periods</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Timeframes</span></label>
+                        <div id="indicator-timeframes" class="grid grid-cols-3 gap-2">
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" value="1m" class="checkbox checkbox-sm" checked> 1m
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" value="5m" class="checkbox checkbox-sm" checked> 5m
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" value="15m" class="checkbox checkbox-sm" checked> 15m
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="modal-action">
                 <button id="indicator-apply-btn" class="btn btn-primary">Apply</button>
                 <form method="dialog">
@@ -146,8 +245,8 @@
                 </form>
             </div>
         </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
-    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
     <!-- Application Scripts -->
     <script src="./dist/lightweight-charts.standalone.production.js"></script>

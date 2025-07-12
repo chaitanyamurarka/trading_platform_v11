@@ -34,6 +34,7 @@ export function getDomElements() {
         startTimeInput: document.getElementById('start_time'),
         endTimeInput: document.getElementById('end_time'),
 
+        // Modal buttons and modals
         indicatorModalBtn: document.getElementById('indicator-modal-btn'),
         settingsModalBtn: document.getElementById('settings-modal-btn'),
         settingsModal: document.getElementById('settings_modal'),
@@ -41,8 +42,26 @@ export function getDomElements() {
         // Indicator Modal
         indicatorModal: document.getElementById('indicator_modal'),
         indicatorApplyBtn: document.getElementById('indicator-apply-btn'),
-        // Add other indicator form elements here if needed...
+
+        // Drawing toolbar elements (will be created dynamically)
+        drawingToolbar: null, // Will be populated after toolbar creation
+        
+        // Data legend
+        dataLegend: document.getElementById('data-legend'),
     };
 
     return elementsCache;
+}
+
+// Function to update elements cache after dynamic content is created
+export function updateElementsCache() {
+    if (elementsCache) {
+        // Update drawing toolbar elements
+        elementsCache.drawingToolbar = document.getElementById('drawing-toolbar');
+        elementsCache.autoScaleBtn = document.getElementById('scaling-auto-btn');
+        elementsCache.linearScaleBtn = document.getElementById('scaling-linear-btn');
+        
+        // Update any other dynamically created elements
+        elementsCache.dataLegend = document.getElementById('data-legend');
+    }
 }

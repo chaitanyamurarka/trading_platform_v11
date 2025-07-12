@@ -13,6 +13,18 @@ export function createMainSeries(chart, type) {
     switch (type) {
         case 'bar':
             return chart.addBarSeries(seriesOptions);
+        case 'line':
+            return chart.addLineSeries({ 
+                color: seriesOptions.upColor,
+                lineWidth: 2 
+            });
+        case 'area':
+            return chart.addAreaSeries({ 
+                lineColor: seriesOptions.upColor, 
+                topColor: `${seriesOptions.upColor}66`, 
+                bottomColor: `${seriesOptions.upColor}00`,
+                lineWidth: 2
+            });
         case 'candlestick':
         default:
             return chart.addCandlestickSeries(seriesOptions);
@@ -24,5 +36,6 @@ export function createVolumeSeries(chart) {
         priceFormat: { type: 'volume' },
         priceScaleId: '', // Render on its own scale
         scaleMargins: { top: 0.8, bottom: 0 },
+        color: '#26a69a80'
     });
 }

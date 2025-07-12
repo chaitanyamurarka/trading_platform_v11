@@ -27,6 +27,80 @@ body {
     bottom: 0;
 }
 
+/* Data Legend Styles */
+#data-legend {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+    padding: 12px;
+    background: rgba(var(--b2), 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    border: 1px solid rgba(var(--bc), 0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    min-width: 180px;
+    font-size: 11px;
+    line-height: 1.4;
+    transition: opacity 0.2s ease-in-out;
+    max-width: calc(100vw - 2rem);
+    word-wrap: break-word;
+}
+
+@media (max-width: 768px) {
+    #data-legend {
+        font-size: 9px;
+        min-width: 130px;
+        top: 4px;
+        left: 4px;
+        padding: 8px;
+        line-height: 1.2;
+    }
+}
+
+/* Drawing Toolbar Styles */
+#drawing-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(var(--b1), 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(var(--bc), 0.1);
+    flex-shrink: 0;
+    min-height: 3rem;
+}
+
+#drawing-toolbar .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+#drawing-toolbar .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Scaling buttons */
+#scaling-buttons-container .join .btn {
+    min-width: 4rem;
+}
+
+#scaling-buttons-container .btn-active {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+    border-color: hsl(var(--p));
+}
+
+/* Divider in toolbar */
+.divider-horizontal {
+    width: 1px;
+    height: 1.5rem;
+    background: rgba(var(--bc), 0.2);
+    margin: 0 0.5rem;
+}
+
 /* Regression Table Animation for live updates */
 @keyframes flash-success {
     0% { background-color: rgba(16, 185, 129, 0); }
@@ -36,4 +110,180 @@ body {
 
 tr.live-regression-update td {
     animation: flash-success 1s ease-out;
+}
+
+/* Regression table enhancements */
+#regression-table-container {
+    transition: all 0.3s ease-in-out;
+}
+
+#regression-table-container.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+#remove-regression-btn {
+    transition: all 0.2s ease;
+}
+
+#remove-regression-btn:hover {
+    transform: scale(1.05);
+    background-color: rgba(var(--b3), 0.5);
+}
+
+/* Table row hover effect */
+#regression-table tbody tr:hover {
+    background-color: rgba(var(--b3), 0.5);
+    transition: background-color 0.2s ease;
+}
+
+/* Loading indicator responsive */
+#loading-indicator {
+    backdrop-filter: blur(4px);
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Toast notifications responsive */
+#toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+    max-width: calc(100vw - 2rem);
+}
+
+/* Enhanced hover effects for better UX */
+.btn:hover,
+select:hover,
+input:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Theme transition */
+* {
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+/* Modal enhancements */
+.modal-box {
+    width: min(90vw, 600px);
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #drawing-toolbar {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        padding: 0.5rem;
+    }
+    
+    #drawing-toolbar .btn {
+        min-width: 2.5rem;
+        padding: 0.25rem;
+    }
+    
+    #scaling-buttons-container .join .btn {
+        min-width: 3rem;
+        font-size: 0.75rem;
+    }
+    
+    .divider-horizontal {
+        display: none;
+    }
+}
+
+/* Chart container responsive */
+@media (max-width: 639px) {
+    .flex-1.p-1 {
+        padding: 0.25rem;
+    }
+    
+    #chart-container {
+        min-height: 300px;
+    }
+}
+
+/* Utility classes */
+.text-success {
+    color: hsl(var(--su)) !important;
+}
+
+.text-error {
+    color: hsl(var(--er)) !important;
+}
+
+.font-mono {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* Print styles for better screenshots */
+@media print {
+    #app-container {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    #drawing-toolbar,
+    #sidebar,
+    .navbar {
+        display: none !important;
+    }
+
+    #chart-container {
+        width: 100% !important;
+        height: 80vh !important;
+        position: relative !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    #data-legend {
+        border: 2px solid;
+        background: var(--fallback-b1, oklch(var(--b1)));
+    }
+    
+    #drawing-toolbar {
+        border-top: 2px solid;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Focus styles for accessibility */
+.btn:focus-visible,
+select:focus-visible,
+input:focus-visible {
+    outline: 2px solid hsl(var(--p));
+    outline-offset: 2px;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(var(--b3), 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(var(--bc), 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--bc), 0.5);
 }
