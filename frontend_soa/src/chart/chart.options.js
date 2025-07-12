@@ -30,7 +30,6 @@ export const getChartOptions = (theme) => {
         watermark: {
             color: 'rgba(150, 150, 150, 0.2)',
             visible: true,
-            text: 'EigenKor SOA',
             fontSize: 48,
             horzAlign: 'center',
             vertAlign: 'center',

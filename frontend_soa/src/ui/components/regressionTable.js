@@ -10,7 +10,10 @@ class RegressionTable {
 
     initialize() {
         this.store.subscribe('isIndicatorActive', (isActive) => {
-            this.elements.regressionTableContainer.classList.toggle('hidden', !isActive);
+            const container = document.getElementById('regression-table-container');
+            if (container) {
+                container.classList.toggle('hidden', !isActive);
+            }
         });
 
         this.store.subscribe('regressionResults', (results) => {
@@ -21,49 +24,117 @@ class RegressionTable {
     }
 
     render(data) {
-        const { regressionTableHead, regressionTableBody } = this.elements;
+        const tableHead = document.querySelector('#regression-table thead');
+        const tableBody = document.querySelector('#regression-table tbody');
+        
+        if (!tableHead || !tableBody) return;
+        
         if (!data || !data.regression_results) {
-            regressionTableBody.innerHTML = '<tr><td colspan="3">No analysis run.</td></tr>';
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center p-4 text-base-content/60">
+                        No indicators applied. Use the 'Indicators' button to run an analysis.
+                    </td>
+                </tr>`;
             return;
         }
 
         const { request_params, regression_results } = data;
-        const lookbackPeriods = request_params.lookback_periods.sort((a, b) => a - b);
+        if (!regression_results || regression_results.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center p-4 text-base-content/60">
+                        No regression results returned for the selected parameters.
+                    </td>
+                </tr>`;
+            return;
+        }
 
-        // Render Header
-        regressionTableHead.innerHTML = `
-            <tr>
-                <th>Timeframe</th>
-                ${lookbackPeriods.map(p => `<th>S[${p}]</th>`).join('')}
-                <th>R-Value (Avg)</th>
-            </tr>`;
+        // Sort lookback periods in descending order
+        const sortedLookbackPeriods = [...request_params.lookback_periods].sort((a, b) => b - a);
+
+        // Build Table Header
+        tableHead.innerHTML = '';
+        const headerRow = document.createElement('tr');
+        
+        // Sr. No. column (sticky left)
+        const srNoTh = document.createElement('th');
+        srNoTh.textContent = 'Sr. No.';
+        srNoTh.className = 'sticky left-0 z-20 bg-base-100 border-r border-base-300 text-center';
+        headerRow.appendChild(srNoTh);
+
+        // Timeframe column (sticky left)
+        const timeframeTh = document.createElement('th');
+        timeframeTh.textContent = 'Timeframe';
+        timeframeTh.className = 'sticky left-16 z-20 bg-base-100 border-r border-base-300 text-center';
+        headerRow.appendChild(timeframeTh);
+
+        // Slope columns (in descending order)
+        sortedLookbackPeriods.forEach(period => {
+            const th = document.createElement('th');
+            th.textContent = `S[${period}]`;
+            th.className = 'text-center';
+            headerRow.appendChild(th);
+        });
+
+        // R-Value column (sticky right)
+        const rValueTh = document.createElement('th');
+        rValueTh.textContent = 'R-Value (Avg)';
+        rValueTh.className = 'sticky right-0 z-20 bg-base-100 border-l border-base-300 text-center';
+        headerRow.appendChild(rValueTh);
+
+        tableHead.appendChild(headerRow);
+
+        // Build Table Body
+        tableBody.innerHTML = '';
+        regression_results.forEach((timeframeResult, index) => {
+            const row = document.createElement('tr');
             
-        // Render Body
-        regressionTableBody.innerHTML = regression_results.map(timeframeResult => {
+            // Sr. No. cell (sticky left)
+            const srCell = row.insertCell();
+            srCell.textContent = index + 1;
+            srCell.className = 'sticky left-0 bg-base-100 border-r border-base-300 text-center';
+            
+            // Timeframe cell (sticky left)
+            const timeframeCell = row.insertCell();
+            timeframeCell.textContent = timeframeResult.timeframe;
+            timeframeCell.className = 'sticky left-16 bg-base-100 border-r border-base-300 text-center';
+
             let totalRValue = 0;
             let rValueCount = 0;
 
-            const slopeCells = lookbackPeriods.map(period => {
+            // Slope values for each lookback (in descending order)
+            sortedLookbackPeriods.forEach(period => {
+                const slopeTd = row.insertCell();
                 const result = timeframeResult.results[period.toString()];
                 if (result) {
+                    slopeTd.textContent = result.slope.toFixed(5);
+                    // Use proper color classes without background
+                    slopeTd.className = result.slope > 0 
+                        ? 'text-success text-center font-medium' 
+                        : 'text-error text-center font-medium';
                     totalRValue += Math.abs(result.r_value);
                     rValueCount++;
-                    const colorClass = result.slope > 0 ? 'text-success' : 'text-error';
-                    return `<td class="${colorClass}">${result.slope.toFixed(5)}</td>`;
+                } else {
+                    slopeTd.textContent = 'N/A';
+                    slopeTd.className = 'text-center text-base-content/60';
                 }
-                return `<td>N/A</td>`;
-            }).join('');
-            
-            const avgRValue = rValueCount > 0 ? (totalRValue / rValueCount).toFixed(4) : 'N/A';
+            });
 
-            return `
-                <tr>
-                    <td>${timeframeResult.timeframe}</td>
-                    ${slopeCells}
-                    <td>${avgRValue}</td>
-                </tr>
-            `;
-        }).join('');
+            // R-Value cell (sticky right)
+            const rValueTd = row.insertCell();
+            if (rValueCount > 0) {
+                const avgRValue = totalRValue / rValueCount;
+                rValueTd.textContent = avgRValue.toFixed(4);
+                rValueTd.className = 'text-center font-medium';
+            } else {
+                rValueTd.textContent = 'N/A';
+                rValueTd.className = 'text-center text-base-content/60';
+            }
+            rValueTd.classList.add('sticky', 'right-0', 'bg-base-100', 'border-l', 'border-base-300');
+            
+            tableBody.appendChild(row);
+        });
     }
 }
 

@@ -1,7 +1,9 @@
 // frontend_soa/src/chart/chart.series.js
+import { store } from '../state/store.js';
 
 export function createMainSeries(chart, type) {
-    const seriesOptions = {
+    const customColors = store.get('seriesColors');
+    const seriesOptions = customColors || {
         upColor: '#10b981',
         downColor: '#ef4444',
         borderDownColor: '#ef4444',

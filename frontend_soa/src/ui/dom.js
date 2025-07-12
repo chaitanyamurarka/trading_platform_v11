@@ -29,6 +29,7 @@ export function getDomElements() {
         regressionTable: document.getElementById('regression-table'),
         regressionTableHead: document.querySelector('#regression-table thead'),
         regressionTableBody: document.querySelector('#regression-table tbody'),
+        removeRegressionBtn: document.getElementById('remove-regression-btn'),
 
         // Time inputs
         startTimeInput: document.getElementById('start_time'),
@@ -38,10 +39,26 @@ export function getDomElements() {
         indicatorModalBtn: document.getElementById('indicator-modal-btn'),
         settingsModalBtn: document.getElementById('settings-modal-btn'),
         settingsModal: document.getElementById('settings_modal'),
+        
+        // Settings inputs
+        gridColorInput: document.getElementById('setting-grid-color'),
+        watermarkInput: document.getElementById('setting-watermark-text'),
+        upColorInput: document.getElementById('setting-up-color'),
+        downColorInput: document.getElementById('setting-down-color'),
+        wickUpColorInput: document.getElementById('setting-wick-up-color'),
+        wickDownColorInput: document.getElementById('setting-wick-down-color'),
+        volUpColorInput: document.getElementById('setting-vol-up-color'),
+        volDownColorInput: document.getElementById('setting-vol-down-color'),
+        disableWicksInput: document.getElementById('setting-disable-wicks'),
+        showOHLCLegendToggle: document.getElementById('setting-show-ohlc-legend'),
 
         // Indicator Modal
         indicatorModal: document.getElementById('indicator_modal'),
         indicatorApplyBtn: document.getElementById('indicator-apply-btn'),
+        indicatorSelect: document.getElementById('indicator-select'),
+        regressionLengthInput: document.getElementById('indicator-regression-length'),
+        lookbackPeriodsInput: document.getElementById('indicator-lookback-periods'),
+        timeframesContainer: document.getElementById('indicator-timeframes'),
 
         // Drawing toolbar elements (will be created dynamically)
         drawingToolbar: null, // Will be populated after toolbar creation
@@ -63,5 +80,6 @@ export function updateElementsCache() {
         
         // Update any other dynamically created elements
         elementsCache.dataLegend = document.getElementById('data-legend');
+        elementsCache.removeRegressionBtn = document.getElementById('remove-regression-btn');
     }
 }

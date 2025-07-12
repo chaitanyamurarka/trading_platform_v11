@@ -163,23 +163,21 @@ class ChartController {
 
     updateDataLegend(param) {
         const dataLegend = document.getElementById('data-legend');
-        if (!dataLegend) return;
-
+        const priceData = param.seriesPrices ? param.seriesPrices.get(this.mainSeries) : undefined;
+        if (!dataLegend || !priceData || !this.store.get('showOHLCLegend')) {
+            if (dataLegend) dataLegend.style.display = 'none';
+            return;
+        }
+        
         if (!param.time || !param.seriesPrices || param.seriesPrices.size === 0) {
             // Show latest values when not hovering
             this.showLatestOHLCValues();
             return;
         }
 
-        const priceData = param.seriesPrices.get(this.mainSeries);
-        if (!priceData) {
-            this.showLatestOHLCValues();
-            return;
-        }
-        
-        let volumeDataForLegend = null;
         const rawVolumeValue = this.volumeSeries ? param.seriesPrices.get(this.volumeSeries) : undefined;
 
+        let volumeDataForLegend = null;
         if (rawVolumeValue !== undefined) {
             volumeDataForLegend = { value: rawVolumeValue };
         }

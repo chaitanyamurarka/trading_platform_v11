@@ -78,6 +78,10 @@ const initialState = {
     isIndicatorLoading: false,
     regressionResults: null,
     isLiveRegressionConnected: false,
+
+    // Settings State
+    showOHLCLegend: true,
+    seriesColors: null,
 };
 
 export const store = new Store(initialState);
