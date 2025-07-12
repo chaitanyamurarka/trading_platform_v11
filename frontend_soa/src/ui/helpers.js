@@ -1,5 +1,79 @@
-// frontend_soa/src/ui/helpers.js
+// Add to frontend_soa/src/ui/helpers.js
+
 import { getDomElements } from './dom.js';
+import { store } from '../state/store.js';
+
+export function setAutomaticDateTime() {
+    const selectedTimezone = store.get('selectedTimezone') || 'America/New_York';
+    
+    const now = new Date();
+    const nyParts = getDatePartsInZone(now, 'America/New_York');
+    
+    // Create a Date object representing 8:00 PM New York time
+    const eightPMNY = new Date(Date.UTC(nyParts.year, nyParts.month - 1, nyParts.day, 0, 0, 0));
+    eightPMNY.setUTCHours(getUTCHourOffset('America/New_York', 20, now));
+    
+    const currentNY = new Date();
+    const currentParts = getDatePartsInZone(currentNY, 'America/New_York');
+    
+    if (currentParts.year === nyParts.year && currentParts.month === nyParts.month && currentParts.day === nyParts.day) {
+        const nowNY = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const endNY = new Date(nowNY);
+        endNY.setHours(20, 0, 0, 0); // set 8 PM NY today
+        
+        if (nowNY < endNY) {
+            endNY.setDate(endNY.getDate() - 1);
+        }
+    }
+    
+    const finalEndUTC = new Date(eightPMNY);
+    const finalStartUTC = new Date(finalEndUTC);
+    finalStartUTC.setUTCDate(finalEndUTC.getUTCDate() - 30);
+    
+    const startFormatted = formatDateInZone(finalStartUTC, selectedTimezone);
+    const endFormatted = formatDateInZone(finalEndUTC, selectedTimezone);
+    
+    // Store in the state
+    store.set('startTime', startFormatted);
+    store.set('endTime', endFormatted);
+    
+    console.log(`[${selectedTimezone}] Start: ${startFormatted}, End: ${endFormatted}`);
+}
+
+function formatDateInZone(date, timeZone) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+        hour12: false
+    }).formatToParts(date);
+    
+    const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
+    return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}`;
+}
+
+function getDatePartsInZone(date, timeZone) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(date);
+    
+    return Object.fromEntries(parts.map(p => [p.type, parseInt(p.value, 10)]));
+}
+
+function getUTCHourOffset(timeZone, targetHourInZone, referenceDate) {
+    const testDate = new Date(referenceDate);
+    testDate.setUTCHours(0, 0, 0, 0); // midnight UTC
+    
+    const zoneHour = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hour: '2-digit',
+        hour12: false
+    }).formatToParts(testDate).find(p => p.type === 'hour').value;
+    
+    const offset = targetHourInZone - parseInt(zoneHour, 10);
+    return 0 + offset;
+}
 
 /**
  * Displays a toast message.

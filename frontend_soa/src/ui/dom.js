@@ -30,6 +30,10 @@ export function getDomElements() {
         regressionTableHead: document.querySelector('#regression-table thead'),
         regressionTableBody: document.querySelector('#regression-table tbody'),
 
+        // Time inputs
+        startTimeInput: document.getElementById('start_time'),
+        endTimeInput: document.getElementById('end_time'),
+
         // Indicator Modal
         indicatorModal: document.getElementById('indicator_modal'),
         indicatorApplyBtn: document.getElementById('indicator-apply-btn'),

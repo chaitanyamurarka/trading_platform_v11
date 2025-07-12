@@ -30,6 +30,10 @@ export function initializeUiListeners(elements) {
     safeAddListener(elements.candleTypeSelect, 'change', (e) => store.set('selectedCandleType', e.target.value), 'candleTypeSelect');
     safeAddListener(elements.chartTypeSelect, 'change', (e) => store.set('selectedChartType', e.target.value), 'chartTypeSelect');
 
+    // Add these listeners
+    safeAddListener(elements.startTimeInput, 'change', (e) => store.set('startTime', e.target.value), 'startTimeInput');
+    safeAddListener(elements.endTimeInput, 'change', (e) => store.set('endTime', e.target.value), 'endTimeInput');
+
     // Live Mode Toggle
     safeAddListener(elements.liveToggle, 'change', (e) => store.set('isLiveMode', e.target.checked), 'liveToggle');
     

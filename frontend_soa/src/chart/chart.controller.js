@@ -25,6 +25,7 @@ class ChartController {
         this.store.subscribe('chartData', (data) => this.mainSeries.setData(data));
         this.store.subscribe('volumeData', (data) => this.volumeSeries.setData(data));
         this.store.subscribe('isLoading', (isLoading) => this.toggleLoadingIndicator(isLoading));
+        this.setupInfiniteScroll();
         
         window.addEventListener('resize', () => this.chart.resize(this.elements.chartContainer.clientWidth, this.elements.chartContainer.clientHeight));
         console.log('ChartController Initialized');
@@ -44,6 +45,16 @@ class ChartController {
         
         this.mainSeries.update(chartBar);
         this.volumeSeries.update(volumeBar);
+    }
+
+    setupInfiniteScroll() {
+        if (!this.chart) return;
+        
+        this.chart.timeScale().subscribeVisibleLogicalRangeChange((newRange) => {
+            if (newRange && newRange.from <= 10 && !this.store.get('isLoading')) {
+                dataService.fetchNextChunk();
+            }
+        });
     }
 }
 

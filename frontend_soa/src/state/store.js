@@ -45,6 +45,10 @@ const initialState = {
     selectedCandleType: 'regular',
     selectedChartType: 'candlestick',
     isLiveMode: false,
+    
+    // Add time parameters
+    startTime: null,
+    endTime: null,
 
     // Data State
     isLoading: false,
@@ -59,5 +63,4 @@ const initialState = {
     regressionResults: null,
     isLiveRegressionConnected: false,
 };
-
 export const store = new Store(initialState);

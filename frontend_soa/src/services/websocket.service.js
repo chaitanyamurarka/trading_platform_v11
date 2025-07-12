@@ -30,14 +30,35 @@ class WebSocketService {
 
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-
-            // For live updates, it's often more performant to update the chart directly
-            // rather than going through the store for every single price tick.
-            if (data.completed_bar) {
-                chartController.updateBar(data.completed_bar);
-            }
-            if (data.current_bar) {
-                chartController.updateBar(data.current_bar);
+            
+            // Handle backfill data (array)
+            if (Array.isArray(data)) {
+                if (data.length > 0) {
+                    const chartData = data.map(c => ({ 
+                        time: c.unix_timestamp, 
+                        open: c.open, 
+                        high: c.high, 
+                        low: c.low, 
+                        close: c.close 
+                    }));
+                    const volumeData = data.map(c => ({ 
+                        time: c.unix_timestamp, 
+                        value: c.volume || 0, 
+                        color: c.close >= c.open ? '#10b98180' : '#ef444480' 
+                    }));
+                    
+                    // Set initial data
+                    chartController.mainSeries.setData(chartData);
+                    chartController.volumeSeries.setData(volumeData);
+                }
+            } else {
+                // Handle live updates
+                if (data.completed_bar) {
+                    chartController.updateBar(data.completed_bar);
+                }
+                if (data.current_bar) {
+                    chartController.updateBar(data.current_bar);
+                }
             }
         };
 
