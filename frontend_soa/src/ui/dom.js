@@ -34,6 +34,10 @@ export function getDomElements() {
         startTimeInput: document.getElementById('start_time'),
         endTimeInput: document.getElementById('end_time'),
 
+        indicatorModalBtn: document.getElementById('indicator-modal-btn'),
+        settingsModalBtn: document.getElementById('settings-modal-btn'),
+        settingsModal: document.getElementById('settings_modal'),
+
         // Indicator Modal
         indicatorModal: document.getElementById('indicator_modal'),
         indicatorApplyBtn: document.getElementById('indicator-apply-btn'),

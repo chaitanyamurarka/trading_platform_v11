@@ -57,5 +57,18 @@ export function initializeUiListeners(elements) {
         }
     }, 'indicatorApplyBtn');
 
+    // Modal button listeners
+    safeAddListener(elements.indicatorModalBtn, 'click', () => {
+        if (elements.indicatorModal && typeof elements.indicatorModal.showModal === 'function') {
+            elements.indicatorModal.showModal();
+        }
+    }, 'indicatorModalBtn');
+    
+    safeAddListener(elements.settingsModalBtn, 'click', () => {
+        if (elements.settingsModal && typeof elements.settingsModal.showModal === 'function') {
+            elements.settingsModal.showModal();
+        }
+    }, 'settingsModalBtn');
+
     console.log('UI Listeners Initialized');
 }
