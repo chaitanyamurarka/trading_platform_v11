@@ -59,14 +59,15 @@ class Symbol(BaseModel):
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
-        nonce = secrets.token_urlsafe(16)
         response.headers["Content-Security-Policy"] = (
-            "img-src 'self' data: https:; "
-            "connect-src 'self' wss: ws:; "
-            "font-src 'self'; "
+            "default-src 'self'; "
+            "script-src 'self' https://cdn.tailwindcss.com; "
+            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+            "font-src 'self' https://cdnjs.cloudflare.com; "
+            "img-src 'self' data: https://placehold.co; " # Changed to a valid placeholder
+            "connect-src 'self' ws: wss:; "
             "object-src 'none'; "
-            "media-src 'self'; "
-            "frame-src 'none';"
+            "frame-ancestors 'none';"
         )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -74,7 +75,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
-        request.state.nonce = nonce
         return response
 
 # Rate Limiting Middleware
@@ -129,18 +129,6 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Static Files
-script_dir = os.path.dirname(__file__)
-frontend_dir = os.path.join(os.path.dirname(script_dir), "frontend_services")
-
-if os.path.exists(frontend_dir):
-    app.mount("/main", StaticFiles(directory=os.path.join(frontend_dir, "main")), name="main")
-    app.mount("/static", StaticFiles(directory=os.path.join(frontend_dir, "public", "static")), name="static")
-    app.mount("/dist", StaticFiles(directory=os.path.join(frontend_dir, "dist")), name="dist")
-    app.mount("/chart", StaticFiles(directory=os.path.join(frontend_dir, "chart")), name="chart")
-    app.mount("/api", StaticFiles(directory=os.path.join(frontend_dir, "api")), name="api")
-    app.mount("/regression", StaticFiles(directory=os.path.join(frontend_dir, "regression")), name="regression")
-    # app.mount("/services", StaticFiles(directory=os.path.join(frontend_dir, "services")), name="services")
 
 # Middleware
 @app.middleware("http")
@@ -519,16 +507,6 @@ async def websocket_proxy_live_regression(
         
         logger.info(f"Closed proxy connection for live regression: {symbol}/{exchange}")
 
-# Root Endpoint
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def root():
-    """Serve the main index.html file."""
-    index_path = os.path.join(frontend_dir, "public", "index.html")
-    if os.path.exists(index_path):
-        with open(index_path, "r") as f:
-            return HTMLResponse(content=f.read())
-    raise HTTPException(status_code=404, detail="index.html not found")
-
 # Health Check
 @app.get("/health", tags=["Health"])
 async def health_check():
@@ -572,12 +550,22 @@ async def health_check():
         "timestamp": datetime.now().isoformat()
     }
 
+# Static Files
+script_dir = os.path.dirname(__file__)
+frontend_dir = os.path.join(os.path.dirname(script_dir), "frontend_soa")
+
+if os.path.exists(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend_soa")
+else:
+    logger.error(f"Frontend directory not found at: {frontend_dir}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        app, 
+        "Port8000:app", 
         host="0.0.0.0", 
         port=8000, 
+        reload=True,
         log_level="warning",  # Suppress info/debug
         access_log=False,     # No access logs in terminal
     )
