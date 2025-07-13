@@ -72,9 +72,10 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- Main Content with FIXED layout structure -->
         <main id="main-content" class="flex-1 flex flex-col overflow-y-auto">
-             <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-2 h-auto md:h-16 md:flex-nowrap md:py-0 bg-base-100 border-b border-base-300 sticky top-0 z-30">
+            <!-- FIXED: Sticky Header -->
+            <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-2 h-auto md:h-16 md:flex-nowrap md:py-0 bg-base-100 border-b border-base-300 sticky top-0 z-30">
                 <div class="flex items-center flex-wrap gap-x-4 gap-y-2 py-2">
                     <div class="form-control flex flex-row items-center">
                         <label for="live-toggle" class="label cursor-pointer py-0">
@@ -113,7 +114,7 @@
                 </label>
             </div>
             
-            <!-- Chart Container -->
+            <!-- FIXED: Chart Container with Fixed Height -->
             <div class="flex-1 p-1">
                 <div class="card bg-base-100 shadow-xl rounded-box relative h-full">
                     <div id="data-legend" class="absolute top-2 left-2 z-10 p-2 bg-base-200 bg-opacity-70 rounded-md text-xs pointer-events-none hidden"></div>
@@ -127,26 +128,71 @@
 
             <!-- Drawing Toolbar will be inserted here dynamically -->
 
-            <!-- Regression Table -->
-            <div id="regression-table-container" class="p-4 bg-base-100 hidden">
-                 <div class="flex items-center gap-3 mb-3">
+            <!-- FIXED: Regression Table with proper scrolling -->
+            <div id="regression-table-container" class="hidden">
+                <div class="flex items-center gap-3 mb-3">
                     <h3 class="font-bold text-lg text-base-content">Linear Regression Analysis</h3>
+                    
+                    <!-- Live status indicator -->
+                    <div id="live-regression-status" class="hidden">
+                        <span class="badge badge-success badge-sm">
+                            <span class="animate-pulse w-2 h-2 bg-green-300 rounded-full inline-block mr-1"></span>
+                            LIVE
+                        </span>
+                    </div>
+                    
+                    <!-- Connection status -->
+                    <div id="regression-connection-status" class="text-xs opacity-60 hidden">
+                        <span id="regression-last-update"></span>
+                    </div>
+                    
                     <div class="flex-1"></div>
+                    
                     <button id="remove-regression-btn" class="btn btn-xs btn-ghost text-error opacity-60 hover:opacity-100" title="Remove Analysis">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
-                <div class="overflow-x-auto max-h-80">
-                    <table id="regression-table" class="table table-zebra table-pin-rows table-sm w-full">
-                        <thead></thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="3" class="text-center p-4 text-base-content/60">
-                                    No indicators applied. Use the 'Indicators' button to run an analysis.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                
+                <!-- FIXED: Table container with proper overflow and sizing -->
+                <div class="table-container bg-base-100 rounded-lg border border-base-300 shadow-sm">
+                    <div class="overflow-x-auto max-h-80">
+                        <table id="regression-table" class="table table-zebra table-pin-rows table-pin-cols table-sm w-full">
+                            <thead>
+                                <tr>
+                                    <th class="sticky left-0 z-20 bg-base-100 border-r border-base-300 text-center">Sr. No.</th>
+                                    <th class="sticky left-16 z-20 bg-base-100 border-r border-base-300 text-center">Timeframe</th>
+                                    <!-- Slope columns will be added dynamically -->
+                                    <th class="sticky right-0 z-20 bg-base-100 border-l border-base-300 text-center">R-Value (Avg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="3" class="text-center p-4 text-base-content/60">
+                                        No indicators applied. Use the 'Indicators' button to run an analysis.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Live regression controls -->
+                <div id="live-regression-controls" class="mt-3 hidden">
+                    <div class="flex items-center justify-between text-sm bg-base-200 rounded-lg p-3">
+                        <div class="flex items-center gap-4">
+                            <span class="text-base-content/70 font-medium">Live Updates:</span>
+                            <span id="update-frequency" class="badge badge-outline badge-sm">Every 1s</span>
+                            <span id="data-latency" class="badge badge-outline badge-sm">Latency: --ms</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="pause-live-regression" class="btn btn-xs btn-outline" title="Pause Live Updates">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button id="refresh-regression" class="btn btn-xs btn-outline" title="Refresh Now">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -261,7 +307,7 @@
         </form>
     </dialog>
 
-    <!-- Indicator Modal -->
+    <!-- Indicator Modal - Will be replaced dynamically with enhanced version -->
     <dialog id="indicator_modal" class="modal">
         <div class="modal-box w-11/12 max-w-2xl">
             <h3 class="font-bold text-lg">Indicator Settings</h3>

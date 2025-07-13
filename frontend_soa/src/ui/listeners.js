@@ -1,8 +1,10 @@
-// frontend_soa/src/ui/listeners.js
+// frontend_soa/src/ui/listeners.js - Fixed with proper modal handling
 import { store } from '../state/store.js';
 import { indicatorService } from '../services/indicator.service.js';
 import { chartController } from '../chart/chart.controller.js';
 import { setAutomaticDateTime, showToast } from './helpers.js';
+import { settingsManager } from './settings.js';
+import { rangeControls } from './rangeControls.js';
 
 /**
  * Initializes all UI event listeners in a safe manner.
@@ -11,17 +13,13 @@ import { setAutomaticDateTime, showToast } from './helpers.js';
 export function initializeUiListeners(elements) {
     /**
      * A helper function to safely add an event listener to an element.
-     * It checks if the element exists before adding the listener to prevent errors.
-     * @param {HTMLElement} element - The DOM element to attach the listener to.
-     * @param {string} event - The name of the event (e.g., 'change').
-     * @param {Function} handler - The function to execute when the event fires.
-     * @param {string} elementName - The name of the element for logging purposes.
      */
     const safeAddListener = (element, event, handler, elementName) => {
         if (element) {
             element.addEventListener(event, handler);
+            console.log(`✅ Listener attached: ${elementName}`);
         } else {
-            console.warn(`UI Listeners: Element '${elementName}' not found. Listener not attached.`);
+            console.warn(`⚠️ UI Listeners: Element '${elementName}' not found. Listener not attached.`);
         }
     };
 
@@ -35,8 +33,6 @@ export function initializeUiListeners(elements) {
     safeAddListener(elements.timezoneSelect, 'change', (e) => {
         const newTimezone = e.target.value;
         store.set('selectedTimezone', newTimezone);
-        
-        // Auto-update start and end times when timezone changes
         setAutomaticDateTime();
     }, 'timezoneSelect');
 
@@ -54,7 +50,6 @@ export function initializeUiListeners(elements) {
         const isLive = e.target.checked;
         
         if (isLive) {
-            // Set automatic date/time when enabling live mode
             setAutomaticDateTime();
         }
         
@@ -78,15 +73,43 @@ export function initializeUiListeners(elements) {
         indicatorService.removeRegressionAnalysis();
     }, 'removeRegressionBtn');
     
-    // Indicator Modal Apply Button
+    // Indicator Modal Apply Button - Updated to use range controls
     safeAddListener(elements.indicatorApplyBtn, 'click', () => {
+        console.log('🔄 Apply button clicked');
+        
         // Get values from form
         const length = parseInt(elements.regressionLengthInput?.value || '10', 10);
-        const lookbackPeriods = elements.lookbackPeriodsInput?.value?.split(',').map(p => parseInt(p.trim(), 10)) || [0, 1, 2, 3, 5];
+        
+        // Try to get lookback periods from range controls first
+        let lookbackPeriods;
+        try {
+            lookbackPeriods = rangeControls.getLookbackPeriods();
+            console.log('📊 Lookback periods from range controls:', lookbackPeriods);
+        } catch (error) {
+            console.warn('⚠️ Range controls failed, using fallback:', error);
+            // Fallback to comma-separated input if range controls fail
+            lookbackPeriods = elements.lookbackPeriodsInput?.value?.split(',').map(p => parseInt(p.trim(), 10)) || [0, 1, 2, 3, 5];
+        }
         
         // Get selected timeframes
         const timeframeCheckboxes = elements.timeframesContainer?.querySelectorAll('input[type="checkbox"]:checked');
         const timeframes = timeframeCheckboxes ? Array.from(timeframeCheckboxes).map(cb => cb.value) : ['1m', '5m', '15m'];
+        
+        // Validation
+        if (isNaN(length) || length < 2) {
+            showToast('Regression Length must be at least 2.', 'error');
+            return;
+        }
+        
+        if (!lookbackPeriods || lookbackPeriods.length === 0) {
+            showToast('Please specify at least one lookback period.', 'error');
+            return;
+        }
+        
+        if (timeframes.length === 0) {
+            showToast('Please select at least one timeframe.', 'error');
+            return;
+        }
         
         const settings = {
             length,
@@ -94,27 +117,72 @@ export function initializeUiListeners(elements) {
             timeframes
         };
         
+        console.log('🚀 Running regression analysis with settings:', settings);
         indicatorService.runRegressionAnalysis(settings);
-        if (elements.indicatorModal && typeof elements.indicatorModal.close === 'function') {
-            elements.indicatorModal.close();
+        
+        // Close modal safely
+        const modal = document.getElementById('indicator_modal');
+        if (modal && typeof modal.close === 'function') {
+            modal.close();
         }
     }, 'indicatorApplyBtn');
 
-    // Modal button listeners
+    // Modal button listeners with improved error handling
     safeAddListener(elements.indicatorModalBtn, 'click', () => {
-        if (elements.indicatorModal && typeof elements.indicatorModal.showModal === 'function') {
-            elements.indicatorModal.showModal();
+        console.log('🔄 Opening indicator modal...');
+        
+        // Get fresh reference to modal (in case it was replaced)
+        const modal = document.getElementById('indicator_modal');
+        if (modal) {
+            console.log('✅ Modal found, showing...');
+            
+            try {
+                modal.showModal();
+                console.log('✅ Modal shown successfully');
+                
+                // Initialize range controls when modal opens
+                setTimeout(() => {
+                    console.log('🔄 Initializing range controls...');
+                    rangeControls.initialize();
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ Failed to show modal:', error);
+                showToast('Failed to open indicator modal', 'error');
+            }
+        } else {
+            console.error('❌ Indicator modal not found in DOM');
+            showToast('Indicator modal not found', 'error');
         }
     }, 'indicatorModalBtn');
     
     safeAddListener(elements.settingsModalBtn, 'click', () => {
-        if (elements.settingsModal && typeof elements.settingsModal.showModal === 'function') {
-            elements.settingsModal.showModal();
+        console.log('🔄 Opening settings modal...');
+        
+        // Get fresh reference to modal
+        const modal = document.getElementById('settings_modal');
+        if (modal) {
+            console.log('✅ Settings modal found, showing...');
+            
+            try {
+                modal.showModal();
+                console.log('✅ Settings modal shown successfully');
+                
+                // Initialize settings manager when modal opens
+                setTimeout(() => {
+                    console.log('🔄 Initializing settings manager...');
+                    settingsManager.initialize();
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ Failed to show settings modal:', error);
+                showToast('Failed to open settings modal', 'error');
+            }
+        } else {
+            console.error('❌ Settings modal not found in DOM');
+            showToast('Settings modal not found', 'error');
         }
     }, 'settingsModalBtn');
-
-    // Setup settings listeners
-    setupSettingsListeners(elements, store, chartController);
 
     // Initialize theme from localStorage on load
     initializeThemeFromStorage(elements);
@@ -122,150 +190,7 @@ export function initializeUiListeners(elements) {
     // Initialize automatic date/time on load
     setAutomaticDateTime();
 
-    console.log('UI Listeners Initialized');
-}
-
-/**
- * Sets up all settings modal listeners
- */
-function setupSettingsListeners(elements, store, chartController) {
-    // Tab switching - Fixed version
-    const settingsModal = elements.settingsModal;
-    if (settingsModal) {
-        const tabButtons = settingsModal.querySelectorAll('.tabs .tab');
-        
-        tabButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                event.preventDefault();
-                
-                // Remove active class from all tabs
-                tabButtons.forEach(tab => tab.classList.remove('tab-active'));
-                
-                // Add active class to clicked tab
-                button.classList.add('tab-active');
-                
-                // Hide all tab contents
-                const allContents = settingsModal.querySelectorAll('.tab-content');
-                allContents.forEach(content => content.classList.add('hidden'));
-                
-                // Show the selected tab content
-                const targetId = button.getAttribute('data-tab');
-                const targetContent = document.getElementById(targetId);
-                if (targetContent) {
-                    targetContent.classList.remove('hidden');
-                }
-            });
-        });
-    }
-
-    // Initialize default colors
-    const initializeColors = () => {
-        const isDark = store.get('theme') === 'dark';
-        
-        // Set default grid color based on theme
-        if (elements.gridColorInput && !elements.gridColorInput.value) {
-            elements.gridColorInput.value = isDark ? '#333333' : '#e0e0e0';
-        }
-    };
-    
-    // Call initialization
-    initializeColors();
-    
-    // Store subscription for theme changes
-    store.subscribe('theme', () => {
-        initializeColors();
-    });
-
-    // Grid color
-    if (elements.gridColorInput) {
-        elements.gridColorInput.addEventListener('input', (e) => {
-            const chart = chartController.getChart();
-            if (chart) {
-                chart.applyOptions({
-                    grid: {
-                        vertLines: { color: e.target.value },
-                        horzLines: { color: e.target.value }
-                    }
-                });
-            }
-        });
-    }
-
-    // Watermark text
-    if (elements.watermarkInput) {
-        elements.watermarkInput.addEventListener('input', (e) => {
-            const chart = chartController.getChart();
-            if (chart) {
-                chart.applyOptions({
-                    watermark: { text: e.target.value }
-                });
-            }
-        });
-    }
-
-    // Series colors
-    const applySeriesColors = () => {
-        store.set('seriesColors', {
-            upColor: elements.upColorInput?.value || '#10b981',
-            downColor: elements.downColorInput?.value || '#ef4444',
-            wickUpColor: elements.disableWicksInput?.checked ? 'rgba(0,0,0,0)' : (elements.wickUpColorInput?.value || '#10b981'),
-            wickDownColor: elements.disableWicksInput?.checked ? 'rgba(0,0,0,0)' : (elements.wickDownColorInput?.value || '#ef4444'),
-            borderUpColor: elements.upColorInput?.value || '#10b981',
-            borderDownColor: elements.downColorInput?.value || '#ef4444',
-        });
-        
-        // Recreate series to apply new colors
-        const chartType = store.get('selectedChartType');
-        chartController.recreateMainSeries(chartType);
-    };
-
-    [elements.upColorInput, elements.downColorInput, elements.wickUpColorInput, elements.wickDownColorInput, elements.disableWicksInput].forEach(input => {
-        if (input) {
-            input.addEventListener('change', applySeriesColors);
-        }
-    });
-
-    // Volume colors
-    const applyVolumeColors = () => {
-        const volumeData = store.get('volumeData');
-        const chartData = store.get('chartData');
-        
-        if (!volumeData || !chartData || !chartController.getVolumeSeries()) return;
-
-        const priceActionMap = new Map();
-        chartData.forEach(priceData => {
-            priceActionMap.set(priceData.time, priceData.close >= priceData.open);
-        });
-
-        const newVolumeData = volumeData.map(volumeData => ({
-            ...volumeData,
-            color: priceActionMap.get(volumeData.time) 
-                ? (elements.volUpColorInput?.value || '#10b981') + '80' 
-                : (elements.volDownColorInput?.value || '#ef4444') + '80',
-        }));
-
-        store.set('volumeData', newVolumeData);
-    };
-
-    [elements.volUpColorInput, elements.volDownColorInput].forEach(input => {
-        if (input) {
-            input.addEventListener('change', applyVolumeColors);
-        }
-    });
-
-    // Show OHLC Legend toggle
-    if (elements.showOHLCLegendToggle) {
-        elements.showOHLCLegendToggle.addEventListener('change', (e) => {
-            store.set('showOHLCLegend', e.target.checked);
-            const dataLegend = document.getElementById('data-legend');
-            if (dataLegend && !e.target.checked) {
-                dataLegend.style.display = 'none';
-            } else if (dataLegend && e.target.checked) {
-                // Force update to show latest values
-                chartController.showLatestOHLCValues();
-            }
-        });
-    }
+    console.log('✅ UI Listeners Initialized');
 }
 
 /**
@@ -275,12 +200,15 @@ function initializeThemeFromStorage(elements) {
     const savedTheme = localStorage.getItem('chartTheme') || 'light';
     const isDark = savedTheme === 'dark';
     
+    console.log(`🎨 Initializing theme: ${savedTheme}`);
+    
     // Set document theme
     document.documentElement.setAttribute('data-theme', savedTheme);
     
     // Sync theme toggle checkbox
     if (elements.themeToggle) {
         elements.themeToggle.checked = isDark;
+        console.log('✅ Theme toggle synced');
     }
     
     // Update store
