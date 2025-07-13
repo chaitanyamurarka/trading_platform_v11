@@ -1,4 +1,4 @@
-// frontend_soa/src/ui/listeners.js - Fixed with proper modal handling
+// frontend_soa/src/ui/listeners.js - Enhanced with settings modal debugging
 import { store } from '../state/store.js';
 import { indicatorService } from '../services/indicator.service.js';
 import { chartController } from '../chart/chart.controller.js';
@@ -127,7 +127,7 @@ export function initializeUiListeners(elements) {
         }
     }, 'indicatorApplyBtn');
 
-    // Modal button listeners with improved error handling
+    // Modal button listeners with enhanced debugging
     safeAddListener(elements.indicatorModalBtn, 'click', () => {
         console.log('🔄 Opening indicator modal...');
         
@@ -156,6 +156,7 @@ export function initializeUiListeners(elements) {
         }
     }, 'indicatorModalBtn');
     
+    // ENHANCED: Settings modal with comprehensive debugging
     safeAddListener(elements.settingsModalBtn, 'click', () => {
         console.log('🔄 Opening settings modal...');
         
@@ -165,18 +166,35 @@ export function initializeUiListeners(elements) {
             console.log('✅ Settings modal found, showing...');
             
             try {
+                // Debug modal state before opening
+                debugModalState(modal);
+                
+                // Force modal visibility BEFORE showing
+                forceModalVisibility(modal);
+                
+                // Try to show modal
                 modal.showModal();
                 console.log('✅ Settings modal shown successfully');
                 
-                // Initialize settings manager when modal opens
+                // Force visibility again after showing
                 setTimeout(() => {
+                    forceModalVisibility(modal);
                     console.log('🔄 Initializing settings manager...');
                     settingsManager.initialize();
+                    
+                    // Additional debugging
+                    setTimeout(() => {
+                        debugModalState(modal);
+                        settingsManager.forceVisible();
+                    }, 200);
                 }, 100);
                 
             } catch (error) {
                 console.error('❌ Failed to show settings modal:', error);
                 showToast('Failed to open settings modal', 'error');
+                
+                // Try alternative approach
+                alternativeModalOpen(modal);
             }
         } else {
             console.error('❌ Settings modal not found in DOM');
@@ -191,6 +209,143 @@ export function initializeUiListeners(elements) {
     setAutomaticDateTime();
 
     console.log('✅ UI Listeners Initialized');
+}
+
+/**
+ * Enhanced modal debugging function
+ */
+function debugModalState(modal) {
+    console.group('🔍 Modal Debug State');
+    
+    if (!modal) {
+        console.error('❌ Modal is null/undefined');
+        console.groupEnd();
+        return;
+    }
+    
+    console.log('📋 Modal element:', modal);
+    console.log('📋 Modal ID:', modal.id);
+    console.log('📋 Modal classes:', modal.className);
+    console.log('📋 Modal open attribute:', modal.hasAttribute('open'));
+    console.log('📋 Modal open property:', modal.open);
+    
+    const styles = window.getComputedStyle(modal);
+    console.log('🎨 Computed styles:', {
+        display: styles.display,
+        visibility: styles.visibility,
+        opacity: styles.opacity,
+        zIndex: styles.zIndex,
+        position: styles.position,
+        backgroundColor: styles.backgroundColor,
+        width: styles.width,
+        height: styles.height
+    });
+    
+    const modalBox = modal.querySelector('.modal-box');
+    if (modalBox) {
+        const boxStyles = window.getComputedStyle(modalBox);
+        console.log('📦 Modal box styles:', {
+            display: boxStyles.display,
+            visibility: boxStyles.visibility,
+            opacity: boxStyles.opacity,
+            backgroundColor: boxStyles.backgroundColor,
+            color: boxStyles.color,
+            transform: boxStyles.transform,
+            width: boxStyles.width,
+            height: boxStyles.height
+        });
+    } else {
+        console.error('❌ Modal box not found');
+    }
+    
+    console.groupEnd();
+}
+
+/**
+ * Force modal visibility with strong CSS overrides
+ */
+function forceModalVisibility(modal) {
+    if (!modal) return;
+    
+    console.log('🔧 Forcing modal visibility...');
+    
+    // Remove any conflicting classes
+    modal.classList.remove('hidden', 'invisible');
+    
+    // Force modal visibility with !important styles
+    modal.style.cssText = `
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 9999 !important;
+        position: fixed !important;
+        inset: 0 !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        align-items: center !important;
+        justify-content: center !important;
+        backdrop-filter: blur(4px) !important;
+        animation: none !important;
+        transform: none !important;
+    `;
+    
+    const modalBox = modal.querySelector('.modal-box');
+    if (modalBox) {
+        modalBox.style.cssText = `
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background: #1f2937 !important;
+            color: #ffffff !important;
+            padding: 2rem !important;
+            border-radius: 0.75rem !important;
+            border: 3px solid #3b82f6 !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            transform: none !important;
+            max-width: 32rem !important;
+            width: 90vw !important;
+            max-height: 80vh !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            z-index: 10000 !important;
+            animation: none !important;
+        `;
+    }
+    
+    // Ensure modal title is visible
+    const title = modal.querySelector('h3');
+    if (title) {
+        title.style.cssText = `
+            color: #ffffff !important;
+            font-size: 1.5rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 1.5rem !important;
+            text-align: center !important;
+        `;
+    }
+    
+    console.log('✅ Modal visibility forced with strong CSS');
+}
+
+/**
+ * Alternative modal opening method
+ */
+function alternativeModalOpen(modal) {
+    console.log('🔄 Trying alternative modal opening method...');
+    
+    // Set the open attribute manually
+    modal.setAttribute('open', '');
+    modal.open = true;
+    
+    // Force visibility
+    forceModalVisibility(modal);
+    
+    // Initialize settings after a delay
+    setTimeout(() => {
+        settingsManager.initialize();
+        settingsManager.forceVisible();
+    }, 500);
+    
+    console.log('✅ Alternative modal opening attempted');
 }
 
 /**
