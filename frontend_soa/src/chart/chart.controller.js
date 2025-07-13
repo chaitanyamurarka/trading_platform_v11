@@ -1,4 +1,4 @@
-// frontend_soa/src/chart/chart.controller.js
+// frontend_soa/src/chart/chart.controller.js - FIXED VERSION
 import { store } from '../state/store.js';
 import { getDomElements } from '../ui/dom.js';
 import { getChartOptions } from './chart.options.js';
@@ -54,6 +54,13 @@ class ChartController {
         this.store.subscribe('theme', (theme) => {
             this.applyTheme(theme);
         });
+
+        // FIXED: Subscribe to series color changes to recreate main series
+        this.store.subscribe('seriesColors', (colors) => {
+            if (colors) {
+                this.recreateMainSeries(this.store.get('selectedChartType'));
+            }
+        });
         
         this.setupInfiniteScroll();
         this.setupResizeHandler();
@@ -62,24 +69,89 @@ class ChartController {
         console.log('ChartController Initialized');
     }
 
+    // FIXED: Enhanced recreateMainSeries method with proper volume data preservation
     recreateMainSeries(chartType) {
         if (!this.chart) return;
         
+        console.log('🔄 Recreating main series with type:', chartType);
+        
         // Get current data before removing series
         const currentData = this.store.get('chartData') || [];
+        const currentVolumeData = this.store.get('volumeData') || [];
         
         // Remove existing main series
         if (this.mainSeries) {
             this.chart.removeSeries(this.mainSeries);
+            this.mainSeries = null;
         }
         
-        // Create new series with the selected type
+        // FIXED: Also handle volume series recreation to ensure proper color application
+        if (this.volumeSeries) {
+            this.chart.removeSeries(this.volumeSeries);
+            this.volumeSeries = null;
+        }
+        
+        // Create new main series with the selected type
         this.mainSeries = createMainSeries(this.chart, chartType);
         
-        // Restore data to new series
+        // FIXED: Recreate volume series to ensure it's properly configured
+        this.volumeSeries = createVolumeSeries(this.chart);
+        
+        // FIXED: Reconfigure volume series scale after recreation
+        this.chart.priceScale('').applyOptions({ 
+            scaleMargins: { top: 0.85, bottom: 0 } 
+        });
+        
+        // FIXED: Restore data to both series immediately
         if (currentData.length > 0) {
             this.mainSeries.setData(currentData);
+            console.log('✅ Main series data restored:', currentData.length, 'candles');
         }
+        
+        // FIXED: Restore volume data with proper color handling
+        if (currentVolumeData.length > 0) {
+            // Apply any color updates from store if they exist
+            const updatedVolumeData = this.applyVolumeColorUpdates(currentVolumeData);
+            this.volumeSeries.setData(updatedVolumeData);
+            console.log('✅ Volume series data restored:', updatedVolumeData.length, 'bars');
+        }
+        
+        // FIXED: Re-trigger autoscaling after series recreation
+        setTimeout(() => {
+            this.applyAutoscaling();
+        }, 50);
+        
+        console.log('✅ Main series recreation complete');
+    }
+
+    // FIXED: New method to apply volume color updates when recreating series
+    applyVolumeColorUpdates(volumeData) {
+        const seriesColors = this.store.get('seriesColors');
+        const chartData = this.store.get('chartData');
+        
+        if (!seriesColors || !chartData) {
+            return volumeData; // Return original data if no updates needed
+        }
+        
+        // Create a map of time -> price action for efficient lookup
+        const priceActionMap = new Map();
+        chartData.forEach(priceBar => {
+            const isBullish = priceBar.close >= priceBar.open;
+            priceActionMap.set(priceBar.time, isBullish);
+        });
+        
+        // Apply updated colors to volume data
+        return volumeData.map(volumeBar => {
+            const isBullish = priceActionMap.get(volumeBar.time);
+            const baseColor = isBullish ? 
+                (seriesColors.upColor || '#10b981') : 
+                (seriesColors.downColor || '#ef4444');
+            
+            return {
+                ...volumeBar,
+                color: baseColor + '80' // Add 50% transparency
+            };
+        });
     }
 
     applyTheme(theme) {
@@ -244,7 +316,7 @@ class ChartController {
         dataLegend.style.display = 'block';
     }
 
-    // NEW: Auto-scaling functionality similar to frontend_services
+    // Auto-scaling functionality
     applyAutoscaling() {
         if (!this.chart) return;
 
@@ -266,7 +338,7 @@ class ChartController {
         this.chart.timeScale().scrollToRealTime();
     }
 
-    // NEW: Screenshot functionality
+    // Screenshot functionality
     takeScreenshot() {
         if (!this.chart) return;
         
