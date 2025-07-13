@@ -1,4 +1,4 @@
-/* frontend_soa/styles/settings.css - Dedicated settings modal CSS with high visibility */
+/* frontend_soa/styles/settings.css - Updated with proper close button styling */
 
 /* CRITICAL: Modal base styles - ensure visibility */
 #settings_modal {
@@ -18,11 +18,13 @@
     opacity: 1 !important;
 }
 
-/* Modal backdrop */
+/* Modal backdrop with proper click handling */
 #settings_modal::backdrop,
 #settings_modal .modal-backdrop {
-    background: rgba(0, 0, 0, 0.5) !important;
+    background: rgba(0, 0, 0, 0.7) !important;
     backdrop-filter: blur(4px) !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 /* CRITICAL: Modal box with forced visibility */
@@ -30,9 +32,9 @@
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    background-color: #1f2937 !important; /* Force dark background */
-    color: #ffffff !important; /* Force white text */
-    border: 2px solid #3b82f6 !important; /* Blue border for visibility */
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+    border: 3px solid #3b82f6 !important;
     border-radius: 0.75rem !important;
     padding: 2rem !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
@@ -43,6 +45,7 @@
     overflow-y: auto !important;
     position: relative !important;
     z-index: 1001 !important;
+    pointer-events: auto !important;
 }
 
 /* Modal title */
@@ -59,7 +62,7 @@
     display: flex !important;
     gap: 0.25rem !important;
     padding: 0.5rem !important;
-    background-color: #374151 !important; /* Darker gray background */
+    background-color: #374151 !important;
     border-radius: 0.75rem !important;
     margin-bottom: 2rem !important;
     border: 2px solid #4b5563 !important;
@@ -77,13 +80,14 @@
     transition: all 0.2s ease !important;
     font-weight: 600 !important;
     text-align: center !important;
-    color: #d1d5db !important; /* Light gray text */
+    color: #d1d5db !important;
     font-size: 1rem !important;
     min-height: 3rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     position: relative !important;
+    pointer-events: auto !important;
 }
 
 #settings_modal .tab:hover {
@@ -94,8 +98,8 @@
 }
 
 #settings_modal .tab-active {
-    background-color: #3b82f6 !important; /* Blue background */
-    color: #ffffff !important; /* White text */
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
     font-weight: 700 !important;
     border: 2px solid #60a5fa !important;
@@ -244,13 +248,14 @@
     border-color: rgba(59, 130, 246, 0.3) !important;
 }
 
-/* Modal action buttons */
+/* CRITICAL: Modal action buttons with proper functionality */
 #settings_modal .modal-action {
     margin-top: 3rem !important;
     padding-top: 2rem !important;
     border-top: 2px solid #4b5563 !important;
     display: flex !important;
     justify-content: center !important;
+    gap: 1rem !important;
 }
 
 #settings_modal .modal-action .btn {
@@ -260,11 +265,79 @@
     font-size: 1rem !important;
     border-radius: 0.75rem !important;
     transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    border: 2px solid transparent !important;
+    background: #6b7280 !important;
+    color: #ffffff !important;
 }
 
 #settings_modal .modal-action .btn:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+    background: #4b5563 !important;
+    border-color: #3b82f6 !important;
+}
+
+#settings_modal .modal-action .btn:active {
+    transform: translateY(0) !important;
+    background: #374151 !important;
+}
+
+/* Special styling for primary buttons */
+#settings_modal .modal-action .btn-primary {
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    border-color: #60a5fa !important;
+}
+
+#settings_modal .modal-action .btn-primary:hover {
+    background: #2563eb !important;
+    border-color: #93c5fd !important;
+}
+
+/* CRITICAL: Form method dialog handling */
+#settings_modal form[method="dialog"] {
+    display: contents !important;
+}
+
+#settings_modal form[method="dialog"] button {
+    min-width: 8rem !important;
+    font-weight: 600 !important;
+    padding: 1rem 2rem !important;
+    font-size: 1rem !important;
+    border-radius: 0.75rem !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    border: 2px solid #6b7280 !important;
+    background: #6b7280 !important;
+    color: #ffffff !important;
+}
+
+#settings_modal form[method="dialog"] button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+    background: #ef4444 !important;
+    border-color: #f87171 !important;
+}
+
+/* Backdrop form styling */
+#settings_modal .modal-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+#settings_modal .modal-backdrop button {
+    position: absolute !important;
+    inset: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 /* Animation keyframes */
@@ -277,6 +350,22 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Close button hover effects */
+#settings_modal .modal-action .btn:focus,
+#settings_modal form[method="dialog"] button:focus {
+    outline: 3px solid rgba(59, 130, 246, 0.5) !important;
+    outline-offset: 2px !important;
+}
+
+/* Ensure buttons are clickable */
+#settings_modal button {
+    pointer-events: auto !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
 }
 
 /* Responsive adjustments */
@@ -302,17 +391,63 @@
         margin: 0 !important;
         width: 100% !important;
     }
+    
+    #settings_modal .modal-action {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+    
+    #settings_modal .modal-action .btn {
+        width: 100% !important;
+    }
 }
 
-/* Debug mode - add .debug-settings class to body */
+/* Debug mode styles */
 .debug-settings #settings_modal * {
-    outline: 2px solid rgba(255, 0, 0, 0.5) !important;
+    outline: 2px solid rgba(255, 0, 0, 0.3) !important;
 }
 
 .debug-settings #settings_modal .tab {
-    outline: 3px solid rgba(0, 255, 0, 0.7) !important;
+    outline: 3px solid rgba(0, 255, 0, 0.5) !important;
 }
 
 .debug-settings #settings_modal .tab-active {
-    outline: 3px solid rgba(0, 0, 255, 0.9) !important;
+    outline: 3px solid rgba(0, 0, 255, 0.7) !important;
+}
+
+.debug-settings #settings_modal .btn {
+    outline: 3px solid rgba(255, 255, 0, 0.7) !important;
+}
+
+/* Enhanced button interaction feedback */
+#settings_modal .btn:not(:disabled):active {
+    transform: scale(0.98) !important;
+}
+
+/* Ensure modal stays on top */
+#settings_modal {
+    z-index: 9999 !important;
+}
+
+#settings_modal .modal-box {
+    z-index: 10000 !important;
+}
+
+/* Force pointer events on all interactive elements */
+#settings_modal input,
+#settings_modal button,
+#settings_modal .tab,
+#settings_modal .toggle {
+    pointer-events: auto !important;
+}
+
+/* Additional close button styling for better visibility */
+#settings_modal .modal-action .btn::before {
+    content: '✕ ';
+    margin-right: 0.5rem;
+    font-weight: bold;
+}
+
+#settings_modal .modal-action .btn-primary::before {
+    content: '✓ ';
 }

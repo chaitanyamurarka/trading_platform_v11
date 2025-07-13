@@ -1,10 +1,11 @@
-// frontend_soa/src/ui/listeners.js - Enhanced with settings modal debugging
+// frontend_soa/src/ui/listeners.js - Updated with modal manager for proper close functionality
 import { store } from '../state/store.js';
 import { indicatorService } from '../services/indicator.service.js';
 import { chartController } from '../chart/chart.controller.js';
 import { setAutomaticDateTime, showToast } from './helpers.js';
 import { settingsManager } from './settings.js';
 import { rangeControls } from './rangeControls.js';
+import { modalManager, openModal, closeModal } from './modalManager.js';
 
 /**
  * Initializes all UI event listeners in a safe manner.
@@ -73,7 +74,7 @@ export function initializeUiListeners(elements) {
         indicatorService.removeRegressionAnalysis();
     }, 'removeRegressionBtn');
     
-    // Indicator Modal Apply Button - Updated to use range controls
+    // Indicator Modal Apply Button
     safeAddListener(elements.indicatorApplyBtn, 'click', () => {
         console.log('🔄 Apply button clicked');
         
@@ -87,7 +88,6 @@ export function initializeUiListeners(elements) {
             console.log('📊 Lookback periods from range controls:', lookbackPeriods);
         } catch (error) {
             console.warn('⚠️ Range controls failed, using fallback:', error);
-            // Fallback to comma-separated input if range controls fail
             lookbackPeriods = elements.lookbackPeriodsInput?.value?.split(',').map(p => parseInt(p.trim(), 10)) || [0, 1, 2, 3, 5];
         }
         
@@ -120,87 +120,44 @@ export function initializeUiListeners(elements) {
         console.log('🚀 Running regression analysis with settings:', settings);
         indicatorService.runRegressionAnalysis(settings);
         
-        // Close modal safely
-        const modal = document.getElementById('indicator_modal');
-        if (modal && typeof modal.close === 'function') {
-            modal.close();
-        }
+        // Close modal using modal manager
+        closeModal('indicator_modal');
     }, 'indicatorApplyBtn');
 
-    // Modal button listeners with enhanced debugging
+    // FIXED: Modal button listeners using modal manager
     safeAddListener(elements.indicatorModalBtn, 'click', () => {
         console.log('🔄 Opening indicator modal...');
         
-        // Get fresh reference to modal (in case it was replaced)
-        const modal = document.getElementById('indicator_modal');
-        if (modal) {
-            console.log('✅ Modal found, showing...');
-            
-            try {
-                modal.showModal();
-                console.log('✅ Modal shown successfully');
-                
-                // Initialize range controls when modal opens
-                setTimeout(() => {
-                    console.log('🔄 Initializing range controls...');
-                    rangeControls.initialize();
-                }, 100);
-                
-            } catch (error) {
-                console.error('❌ Failed to show modal:', error);
-                showToast('Failed to open indicator modal', 'error');
-            }
+        const success = openModal('indicator_modal');
+        if (success) {
+            // Initialize range controls when modal opens
+            setTimeout(() => {
+                console.log('🔄 Initializing range controls...');
+                rangeControls.initialize();
+            }, 100);
         } else {
-            console.error('❌ Indicator modal not found in DOM');
-            showToast('Indicator modal not found', 'error');
+            showToast('Failed to open indicator modal', 'error');
         }
     }, 'indicatorModalBtn');
     
-    // ENHANCED: Settings modal with comprehensive debugging
+    // FIXED: Settings modal using modal manager
     safeAddListener(elements.settingsModalBtn, 'click', () => {
         console.log('🔄 Opening settings modal...');
         
-        // Get fresh reference to modal
-        const modal = document.getElementById('settings_modal');
-        if (modal) {
-            console.log('✅ Settings modal found, showing...');
-            
-            try {
-                // Debug modal state before opening
-                debugModalState(modal);
-                
-                // Force modal visibility BEFORE showing
-                forceModalVisibility(modal);
-                
-                // Try to show modal
-                modal.showModal();
-                console.log('✅ Settings modal shown successfully');
-                
-                // Force visibility again after showing
-                setTimeout(() => {
-                    forceModalVisibility(modal);
-                    console.log('🔄 Initializing settings manager...');
-                    settingsManager.initialize();
-                    
-                    // Additional debugging
-                    setTimeout(() => {
-                        debugModalState(modal);
-                        settingsManager.forceVisible();
-                    }, 200);
-                }, 100);
-                
-            } catch (error) {
-                console.error('❌ Failed to show settings modal:', error);
-                showToast('Failed to open settings modal', 'error');
-                
-                // Try alternative approach
-                alternativeModalOpen(modal);
-            }
+        const success = openModal('settings_modal');
+        if (success) {
+            // Initialize settings when modal opens
+            setTimeout(() => {
+                console.log('🔄 Initializing settings manager...');
+                settingsManager.initialize();
+            }, 100);
         } else {
-            console.error('❌ Settings modal not found in DOM');
-            showToast('Settings modal not found', 'error');
+            showToast('Failed to open settings modal', 'error');
         }
     }, 'settingsModalBtn');
+
+    // Setup manual close button handlers for better reliability
+    setupManualCloseHandlers();
 
     // Initialize theme from localStorage on load
     initializeThemeFromStorage(elements);
@@ -212,140 +169,79 @@ export function initializeUiListeners(elements) {
 }
 
 /**
- * Enhanced modal debugging function
+ * Setup manual close button handlers as backup
  */
-function debugModalState(modal) {
-    console.group('🔍 Modal Debug State');
-    
-    if (!modal) {
-        console.error('❌ Modal is null/undefined');
-        console.groupEnd();
-        return;
+function setupManualCloseHandlers() {
+    // Settings modal close handlers
+    const settingsModal = document.getElementById('settings_modal');
+    if (settingsModal) {
+        // Close button in modal action
+        const settingsCloseBtn = settingsModal.querySelector('.modal-action .btn, .modal-action button');
+        if (settingsCloseBtn) {
+            settingsCloseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔘 Settings close button clicked');
+                closeModal('settings_modal');
+            });
+        }
+
+        // Backdrop click
+        const settingsBackdrop = settingsModal.querySelector('.modal-backdrop');
+        if (settingsBackdrop) {
+            settingsBackdrop.addEventListener('click', (e) => {
+                if (e.target === settingsBackdrop) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔘 Settings backdrop clicked');
+                    closeModal('settings_modal');
+                }
+            });
+        }
     }
-    
-    console.log('📋 Modal element:', modal);
-    console.log('📋 Modal ID:', modal.id);
-    console.log('📋 Modal classes:', modal.className);
-    console.log('📋 Modal open attribute:', modal.hasAttribute('open'));
-    console.log('📋 Modal open property:', modal.open);
-    
-    const styles = window.getComputedStyle(modal);
-    console.log('🎨 Computed styles:', {
-        display: styles.display,
-        visibility: styles.visibility,
-        opacity: styles.opacity,
-        zIndex: styles.zIndex,
-        position: styles.position,
-        backgroundColor: styles.backgroundColor,
-        width: styles.width,
-        height: styles.height
+
+    // Indicator modal close handlers
+    const indicatorModal = document.getElementById('indicator_modal');
+    if (indicatorModal) {
+        // Close button in modal action
+        const indicatorCloseBtn = indicatorModal.querySelector('.modal-action .btn:not(.btn-primary), .modal-action button:not(.btn-primary)');
+        if (indicatorCloseBtn) {
+            indicatorCloseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔘 Indicator close button clicked');
+                closeModal('indicator_modal');
+            });
+        }
+
+        // Backdrop click
+        const indicatorBackdrop = indicatorModal.querySelector('.modal-backdrop');
+        if (indicatorBackdrop) {
+            indicatorBackdrop.addEventListener('click', (e) => {
+                if (e.target === indicatorBackdrop) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔘 Indicator backdrop clicked');
+                    closeModal('indicator_modal');
+                }
+            });
+        }
+    }
+
+    // Global ESC key handler
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const openModals = modalManager.getOpenModals();
+            if (openModals.length > 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('⌨️ ESC pressed, closing modal:', openModals[openModals.length - 1]);
+                closeModal(openModals[openModals.length - 1]); // Close the last opened modal
+            }
+        }
     });
-    
-    const modalBox = modal.querySelector('.modal-box');
-    if (modalBox) {
-        const boxStyles = window.getComputedStyle(modalBox);
-        console.log('📦 Modal box styles:', {
-            display: boxStyles.display,
-            visibility: boxStyles.visibility,
-            opacity: boxStyles.opacity,
-            backgroundColor: boxStyles.backgroundColor,
-            color: boxStyles.color,
-            transform: boxStyles.transform,
-            width: boxStyles.width,
-            height: boxStyles.height
-        });
-    } else {
-        console.error('❌ Modal box not found');
-    }
-    
-    console.groupEnd();
-}
 
-/**
- * Force modal visibility with strong CSS overrides
- */
-function forceModalVisibility(modal) {
-    if (!modal) return;
-    
-    console.log('🔧 Forcing modal visibility...');
-    
-    // Remove any conflicting classes
-    modal.classList.remove('hidden', 'invisible');
-    
-    // Force modal visibility with !important styles
-    modal.style.cssText = `
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 9999 !important;
-        position: fixed !important;
-        inset: 0 !important;
-        background: rgba(0, 0, 0, 0.7) !important;
-        align-items: center !important;
-        justify-content: center !important;
-        backdrop-filter: blur(4px) !important;
-        animation: none !important;
-        transform: none !important;
-    `;
-    
-    const modalBox = modal.querySelector('.modal-box');
-    if (modalBox) {
-        modalBox.style.cssText = `
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            background: #1f2937 !important;
-            color: #ffffff !important;
-            padding: 2rem !important;
-            border-radius: 0.75rem !important;
-            border: 3px solid #3b82f6 !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-            transform: none !important;
-            max-width: 32rem !important;
-            width: 90vw !important;
-            max-height: 80vh !important;
-            overflow-y: auto !important;
-            position: relative !important;
-            z-index: 10000 !important;
-            animation: none !important;
-        `;
-    }
-    
-    // Ensure modal title is visible
-    const title = modal.querySelector('h3');
-    if (title) {
-        title.style.cssText = `
-            color: #ffffff !important;
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-            margin-bottom: 1.5rem !important;
-            text-align: center !important;
-        `;
-    }
-    
-    console.log('✅ Modal visibility forced with strong CSS');
-}
-
-/**
- * Alternative modal opening method
- */
-function alternativeModalOpen(modal) {
-    console.log('🔄 Trying alternative modal opening method...');
-    
-    // Set the open attribute manually
-    modal.setAttribute('open', '');
-    modal.open = true;
-    
-    // Force visibility
-    forceModalVisibility(modal);
-    
-    // Initialize settings after a delay
-    setTimeout(() => {
-        settingsManager.initialize();
-        settingsManager.forceVisible();
-    }, 500);
-    
-    console.log('✅ Alternative modal opening attempted');
+    console.log('✅ Manual close handlers setup');
 }
 
 /**
