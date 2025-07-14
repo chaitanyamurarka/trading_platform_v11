@@ -135,6 +135,12 @@ class RegressionTable {
             
             tableBody.appendChild(row);
         });
+
+        // Scroll the table to the rightmost position
+        const scrollContainer = document.getElementById('regression-table-scroll-container');
+        if (scrollContainer) {
+            scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+        }    
     }
 }
 
