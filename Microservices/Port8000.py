@@ -64,7 +64,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "script-src 'self' https://cdn.tailwindcss.com; "
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
             "font-src 'self' https://cdnjs.cloudflare.com; "
-            "img-src 'self' data: https://placehold.co; " # Changed to a valid placeholder
+            "img-src 'self' data: https://placehold.co; "
             "connect-src 'self' ws: wss:; "
             "object-src 'none'; "
             "frame-ancestors 'none';"

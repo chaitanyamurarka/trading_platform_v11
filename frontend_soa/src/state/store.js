@@ -53,6 +53,7 @@ const initialState = {
 
     // UI & Chart Parameters
     selectedSymbol: 'SPY',
+    selectedExchange: 'NASDAQ',
     selectedInterval: '1m',
     selectedTimezone: 'America/New_York',
     selectedCandleType: 'regular',

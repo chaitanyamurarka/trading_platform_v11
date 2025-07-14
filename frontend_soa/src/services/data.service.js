@@ -89,7 +89,7 @@ class DataService {
             
             const params = new URLSearchParams({
                 session_token: token,
-                exchange: 'NASDAQ',
+                exchange: this.store.get('selectedExchange'),
                 token: symbol,
                 interval: interval,
                 start_time: startTime,

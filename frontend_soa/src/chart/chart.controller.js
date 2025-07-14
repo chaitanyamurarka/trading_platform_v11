@@ -344,21 +344,30 @@ class ChartController {
         
         try {
             const canvas = this.chart.takeScreenshot();
-            this.downloadChartScreenshot(canvas);
+            // *** CHANGE THIS LINE ***
+            this.downloadCanvasAsBlob(canvas); // Was: this.downloadChartScreenshot(canvas);
         } catch (error) {
             console.error('Failed to take screenshot:', error);
         }
     }
 
-    downloadChartScreenshot(canvas) {
+    downloadCanvasAsBlob(canvas) {
         if (!canvas) return;
-        
-        const link = document.createElement('a');
-        link.href = canvas.toDataURL();
-        link.download = `chart-screenshot-${new Date().toISOString()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+
+        canvas.toBlob((blob) => {
+            const link = document.createElement('a');
+            // Create a temporary URL for the Blob
+            link.href = URL.createObjectURL(blob);
+            link.download = `chart-screenshot-${new Date().toISOString()}.png`;
+            
+            // Trigger the download and clean up
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Revoke the Object URL to free up memory
+            URL.revokeObjectURL(link.href);
+        }, 'image/png');
     }
 
     // Public API methods

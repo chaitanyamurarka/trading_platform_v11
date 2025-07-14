@@ -17,6 +17,7 @@ export function initializeUiListeners(elements) {
     };
 
     // Chart Parameter Listeners
+    safeAddListener(elements.exchangeSelect, 'change', (e) => store.set('selectedExchange', e.target.value), 'exchangeSelect');
     safeAddListener(elements.symbolSelect, 'change', (e) => store.set('selectedSymbol', e.target.value), 'symbolSelect');
     safeAddListener(elements.intervalSelect, 'change', (e) => store.set('selectedInterval', e.target.value), 'intervalSelect');
     safeAddListener(elements.candleTypeSelect, 'change', (e) => store.set('selectedCandleType', e.target.value), 'candleTypeSelect');

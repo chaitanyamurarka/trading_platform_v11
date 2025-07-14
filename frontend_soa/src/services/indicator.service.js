@@ -21,7 +21,7 @@ class IndicatorService {
         try {
             const requestBody = {
                 symbol: this.store.get('selectedSymbol'),
-                exchange: 'NASDAQ',
+                exchange: this.store.get('selectedExchange'),
                 regression_length: settings.length,
                 lookback_periods: settings.lookbackPeriods,
                 timeframes: settings.timeframes,

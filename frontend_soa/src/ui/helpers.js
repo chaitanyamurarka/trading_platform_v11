@@ -104,6 +104,27 @@ export function showToast(message, type = 'info') {
 }
 
 /**
+ * Populates the exchange select dropdown from the list of symbols.
+ * @param {Array<{symbol: string, exchange: string}>} symbols - An array of symbol objects.
+ */
+export function populateExchangeSelect(symbols) {
+    const { exchangeSelect } = getDomElements();
+    if (!exchangeSelect) return;
+
+    exchangeSelect.innerHTML = ''; // Clear existing options
+
+    // Get unique exchanges from the symbols list
+    const exchanges = [...new Set(symbols.map(s => s.exchange))];
+
+    exchanges.forEach(exchange => {
+        const option = document.createElement('option');
+        option.value = exchange;
+        option.textContent = exchange;
+        exchangeSelect.appendChild(option);
+    });
+}
+
+/**
  * Populates the symbol select dropdown.
  * @param {Array<{symbol: string}>} symbols - An array of symbol objects.
  */
