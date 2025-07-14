@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EigenKor Stock Charts</title>
+    
+    <link href="./static/css/daisyui.full.css" rel="stylesheet" type="text/css" />
+    <link href="./static/css/output.css" rel="stylesheet">
+    <link rel="stylesheet" href="./static/css/font-awesome.min.css">
+    
+    <link rel="stylesheet" href="../static/css/main.css">
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="../static/favicon_io/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../static/favicon_io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../static/favicon_io/favicon-16x16.png">
+    <link rel="manifest" href="../static/favicon_io/site.webmanifest">
+</head>
+
+<body class="bg-base-200">
+    <div id="sidebar-overlay" class="fixed inset-0 hidden"></div>
+
+    <div class="flex h-screen">
+        <aside id="sidebar" class="flex flex-col bg-base-100 px-4 py-8">
+            <h2 class="text-3xl font-semibold text-primary">EigenKor</h2>
+            <div class="mt-8">
+                <div class="mt-4">
+                    <div class="mb-4">
+                        <label for="exchange" class="text-sm">Exchange</label>
+                        <select id="exchange" class="select select-bordered select-sm w-full">
+                            <option value="NASDAQ" selected>NASDAQ</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="symbol" class="text-sm">Symbol</label>
+                        <select id="symbol" class="select select-bordered select-sm w-full">
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="interval" class="text-sm">Interval</label>
+                        <select id="interval" class="select select-bordered select-sm w-full">
+                            <optgroup label="Seconds">
+                                <option value="1s">1 Second</option>
+                                <option value="5s">5 Seconds</option>
+                                <option value="10s">10 Seconds</option>
+                                <option value="15s">15 Seconds</option>
+                                <option value="30s">30 Seconds</option>
+                                <option value="45s">45 Seconds</option>
+                            </optgroup>
+                            <optgroup label="Minutes">
+                                <option value="1m" selected>1 Minute</option>
+                                <option value="5m">5 Minutes</option>
+                                <option value="10m">10 Minutes</option>
+                                <option value="15m">15 Minutes</option>
+                                <option value="30m">30 Minutes</option>
+                                <option value="45m">45 Minutes</option>
+                            </optgroup>
+                            <optgroup label="Hours & Days">
+                                <option value="1h">1 Hour</option>
+                                <option value="1d">1 Day</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="start_time" class="text-sm">Start Time</label>
+                        <input id="start_time" type="datetime-local" class="input input-bordered input-sm w-full">
+                    </div>
+                    <div class="mb-4">
+                        <label for="end_time" class="text-sm">End Time</label>
+                        <input id="end_time" type="datetime-local" class="input input-bordered input-sm w-full">
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main id="main-content" class="flex-1 flex flex-col overflow-y-auto">
+            <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-2 h-auto md:h-16 md:flex-nowrap md:py-0 bg-base-100 border-b border-base-300 sticky top-0 z-30">
+                <div class="flex items-center justify-between h-auto md:h-16 bg-base-100 px-4 border-b border-base-300">
+                    
+                    <div class="flex items-center flex-wrap gap-x-4 gap-y-2 py-2">
+                        <button id="menu-toggle" class="btn btn-ghost -ml-2 md:hidden">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+
+                        <div class="form-control flex flex-row items-center">
+                            <label for="live-toggle" class="label cursor-pointer py-0">
+                                <span class="label-text mr-2">Live</span>
+                                <input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-primary">
+                            </label>
+                        </div>
+                        
+                        <select id="timezone" class="select select-bordered select-sm">
+                            <option value="Etc/UTC">UTC</option>
+                            <option value="Europe/London">London</option>
+                            <option value="America/New_York" selected>New York</option>
+                            <option value="Asia/Kolkata">Kolkata</option>
+                        </select>
+                        
+                        <div class="form-control">
+                            <select id="candle-type-select" class="select select-bordered select-sm">
+                                <option value="regular" selected>Regular</option>
+                                <option value="heikin_ashi">Heikin Ashi</option>
+                            </select>
+                        </div>
+
+                        <select id="chart-type" class="select select-bordered select-sm">
+                            <option value="candlestick" selected>Candlestick</option>
+                            <option value="bar">Bar</option>
+                        </select>
+                        
+                        <button id="screenshot-btn" class="btn btn-sm btn-ghost"><i class="fas fa-camera"></i></button>
+                        <button class="btn btn-sm btn-ghost" onclick="indicator_modal.showModal()"><i class="fas fa-chart-bar"></i> Indicators</button>
+                        <button class="btn btn-sm btn-ghost" onclick="settings_modal.showModal()"><i class="fas fa-cog"></i></button>
+                    </div>
+
+                    <label class="swap swap-rotate" id="theme-toggle">
+                        <input type="checkbox" />
+                        <svg class="swap-on fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29l.71-.71A1,1,0,0,0,6.34,4.93l-.71.71A1,1,0,0,0,5.64,7.05ZM18.36,16.95a1,1,0,0,0-.7-1.71H16.91a1,1,0,0,0,0,2h.75a1,1,0,0,0,.7-1.71ZM12,18a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V19A1,1,0,0,0,12,18Zm5.36-1.64a1,1,0,0,0-.71.29l-.71.71a1,1,0,1,0,1.41,1.41l.71-.71A1,1,0,0,0,17.36,16.36ZM20,11H19a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Z"/></svg>
+                        <svg class="swap-off fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"/></svg>
+                    </label>
+                </div>                
+            </div>
+            <div class="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                <!-- Chart container -->
+                <div class="p-1 flex flex-col">
+                    <div class="card bg-base-100 shadow-xl rounded-box relative" style="height: 60vh; min-height: 400px;">
+                        <div id="data-legend" class="absolute top-2 left-2 z-10 p-2 bg-base-200 bg-opacity-70 rounded-md text-xs pointer-events-none hidden"></div>
+                        <div class="chart-wrapper h-full">
+                            <div id="chartContainer" class="w-full h-full relative">
+                                <div id="loadingIndicator" class="absolute inset-0 flex items-center justify-center bg-base-100 bg-opacity-50 z-20" style="display: none;">
+                                    <span class="loading loading-spinner loading-lg"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            <div id="drawing-toolbar" class="flex items-center justify-center gap-2 p-2 bg-base-100">
+                <button id="tool-trend-line" class="btn btn-sm btn-ghost" title="Trend Line"><i class="fas fa-chart-line"></i></button>
+                <button id="tool-horizontal-line" class="btn btn-sm btn-ghost" title="Horizontal Line"><i class="fas fa-ruler-horizontal"></i></button>
+                <button id="tool-fib-retracement" class="btn btn-sm btn-ghost" title="Fibonacci Retracement"><i class="fas fa-wave-square"></i></button>
+                <button id="tool-rectangle" class="btn btn-sm btn-ghost" title="Rectangle"><i class="far fa-square"></i></button>
+                <button id="tool-brush" class="btn btn-sm btn-ghost" title="Brush"><i class="fas fa-paint-brush"></i></button>
+                <div class="divider lg:divider-horizontal"></div>
+                <button id="tool-remove-selected" class="btn btn-sm btn-ghost text-error" title="Remove Selected"><i class="fas fa-eraser"></i></button>
+                <button id="tool-remove-all" class="btn btn-sm btn-ghost text-error" title="Remove All"><i class="fas fa-trash-alt"></i></button>
+                
+                <div class="divider lg:divider-horizontal"></div> 
+                <div id="scaling-buttons-container">
+                    <div class="join">
+                        <button id="scaling-auto-btn" class="btn btn-sm join-item btn-active" title="Automatic Scaling">Auto</button>
+                        <button id="scaling-linear-btn" class="btn btn-sm join-item" title="Linear Scaling">Linear</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="regression-table-container" class="p-4 bg-base-100 hidden">
+                <div class="flex items-center gap-3 mb-3">
+                    <h3 class="font-bold text-lg text-base-content">Linear Regression Analysis</h3>
+                    
+                    <!-- Live status indicator -->
+                    <div id="live-regression-status" class="hidden">
+                        <span class="badge badge-success badge-sm">
+                            <span class="animate-pulse w-2 h-2 bg-green-300 rounded-full inline-block mr-1"></span>
+                            LIVE
+                        </span>
+                    </div>
+                    
+                    <!-- Connection status -->
+                    <div id="regression-connection-status" class="text-xs opacity-60 hidden">
+                        <span id="regression-last-update"></span>
+                    </div>
+                    
+                    <div class="flex-1"></div>
+                    
+                    <button id="remove-regression-btn" class="btn btn-xs btn-ghost text-error opacity-60 hover:opacity-100" title="Remove Analysis">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                
+                <!-- FIXED: Table container with proper overflow and sizing -->
+                <div class="table-container bg-base-100 rounded-lg border border-base-300 shadow-sm">
+                    <div class="overflow-x-auto max-h-80">
+                        <table id="regression-table" class="table table-zebra table-pin-rows table-pin-cols table-sm w-full">
+                            <thead>
+                                <tr>
+                                    <th class="sticky left-0 z-20 bg-base-100 border-r border-base-300 text-center">Sr. No.</th>
+                                    <th class="sticky left-16 z-20 bg-base-100 border-r border-base-300 text-center">Timeframe</th>
+                                    <!-- Slope columns will be added dynamically -->
+                                    <th class="sticky right-0 z-20 bg-base-100 border-l border-base-300 text-center">R-Value (Avg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="3" class="text-center p-4 text-base-content/60">
+                                        No indicators applied. Use the 'Indicators' button to run an analysis.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Live regression controls -->
+                <div id="live-regression-controls" class="mt-3 hidden">
+                    <div class="flex items-center justify-between text-sm bg-base-200 rounded-lg p-3">
+                        <div class="flex items-center gap-4">
+                            <span class="text-base-content/70 font-medium">Live Updates:</span>
+                            <span id="update-frequency" class="badge badge-outline badge-sm">Every 1s</span>
+                            <span id="data-latency" class="badge badge-outline badge-sm">Latency: --ms</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="pause-live-regression" class="btn btn-xs btn-outline" title="Pause Live Updates">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button id="refresh-regression" class="btn btn-xs btn-outline" title="Refresh Now">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <dialog id="settings_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-2xl">
+            <h3 class="font-bold text-lg">Chart Settings</h3>
+            <div class="tabs tabs-boxed my-4">
+                <a class="tab tab-active" data-tab="chart-settings-tab">Chart</a>
+                <a class="tab" data-tab="series-settings-tab">Series</a>
+            </div>
+            
+            <div class="space-y-4 tab-content" id="chart-settings-tab">
+                <div class="form-control"><label class="label"><span class="label-text">Grid Color</span></label><input type="color" id="setting-grid-color" class="input input-sm"></div>
+                <div class="form-control"><label class="label"><span class="label-text">Watermark Text</span></label><input type="text" id="setting-watermark-text" class="input input-sm input-bordered"></div>
+            </div>
+
+            <div class="space-y-4 tab-content hidden" id="series-settings-tab">
+                <p class="font-bold">Candlestick/Bar Colors</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control"><label class="label"><span class="label-text">Up Color</span></label><input type="color" id="setting-up-color" class="input input-sm"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">Down Color</span></label><input type="color" id="setting-down-color" class="input input-sm"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">Wick Up</span></label><input type="color" id="setting-wick-up-color" class="input input-sm"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">Wick Down</span></label><input type="color" id="setting-wick-down-color" class="input input-sm"></div>
+                </div>
+                
+                <div class="form-control">
+                    <label class="cursor-pointer inline-flex items-center gap-4">
+                        <span class="label-text">Disable Wicks</span>
+                        <input type="checkbox" id="setting-disable-wicks" class="toggle" />
+                    </label>
+                    <label class="cursor-pointer inline-flex items-center gap-4">
+                        <span class="label-text">Show OHLCV on Hover</span>
+                        <input type="checkbox" id="setting-show-ohlc-legend" class="toggle" checked />
+                    </label>
+                </div>
+                <div class="divider"></div>
+                <p class="font-bold">Volume Colors</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control"><label class="label"><span class="label-text">Up Color</span></label><input type="color" id="setting-vol-up-color" class="input input-sm"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">Down Color</span></label><input type="color" id="setting-vol-down-color" class="input input-sm"></div>
+                </div>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <dialog id="indicator_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-2xl">
+            <h3 class="font-bold text-lg">Indicator Settings</h3>
+            <div class="py-4 space-y-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Indicator</span></label>
+                    <select id="indicator-select" class="select select-bordered select-sm">
+                        <option value="linear_regression" selected>Linear Regression</option>
+                    </select>
+                </div>
+                
+                <div id="linear-regression-settings">
+                    <!-- Preset buttons will be added dynamically here -->
+                    
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Regression Length</span></label>
+                        <input type="number" id="indicator-regression-length" value="4" min="2" max="1000" class="input input-bordered input-sm">
+                        <label class="label">
+                            <span class="label-text-alt">Number of candles to use for regression calculation (2-1000)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="card bg-base-200/50 shadow-sm">
+                        <div class="card-body p-4">
+                            <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
+                                <i class="fas fa-arrows-alt-h text-primary"></i>
+                                Lookback Period Range
+                                <div class="badge badge-info badge-xs">Enhanced</div>
+                            </h4>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Min Lookback -->
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text text-sm">Min Lookback</span>
+                                        <span class="label-text-alt" id="min-lookback-display">0</span>
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input 
+                                            type="range" 
+                                            id="min-lookback-slider" 
+                                            min="0" 
+                                            max="50" 
+                                            value="0" 
+                                            class="range range-secondary range-xs flex-1"
+                                        >
+                                        <input 
+                                            type="number" 
+                                            id="min-lookback-input" 
+                                            min="0" 
+                                            max="50" 
+                                            value="0" 
+                                            class="input input-bordered input-xs w-14 text-center"
+                                        >
+                                    </div>
+                                </div>
+
+                                <!-- Max Lookback -->
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text text-sm">Max Lookback</span>
+                                        <span class="label-text-alt" id="max-lookback-display">5</span>
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input 
+                                            type="range" 
+                                            id="max-lookback-slider" 
+                                            min="1" 
+                                            max="50" 
+                                            value="5" 
+                                            class="range range-accent range-xs flex-1"
+                                        >
+                                        <input 
+                                            type="number" 
+                                            id="max-lookback-input" 
+                                            min="1" 
+                                            max="50" 
+                                            value="5" 
+                                            class="input input-bordered input-xs w-14 text-center"
+                                        >
+                                    </div>
+                                </div>
+
+                                <!-- Step Size -->
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text text-sm">Step Size</span>
+                                        <span class="label-text-alt" id="step-size-display">1</span>
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input 
+                                            type="range" 
+                                            id="step-size-slider" 
+                                            min="1" 
+                                            max="5" 
+                                            value="1" 
+                                            class="range range-warning range-xs flex-1"
+                                        >
+                                        <input 
+                                            type="number" 
+                                            id="step-size-input" 
+                                            min="1" 
+                                            max="5" 
+                                            value="1" 
+                                            class="input input-bordered input-xs w-14 text-center"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Live Preview -->
+                            <div class="mt-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium">Generated Periods:</span>
+                                    <div class="badge badge-primary badge-sm" id="period-count">6 periods</div>
+                                </div>
+                                <div class="bg-base-100 rounded p-2 text-xs font-mono border" id="lookback-preview">
+                                    [0, 1, 2, 3, 4, 5]
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-control">
+                        <label class="label"><span class="label-text">Timeframes</span></label>
+                        <div id="indicator-timeframes" class="grid grid-cols-3 gap-2">
+                            <label class="flex items-center gap-2"><input type="checkbox" value="10s" class="checkbox checkbox-sm" checked> 10s</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="30s" class="checkbox checkbox-sm" checked> 30s</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="45s" class="checkbox checkbox-sm"> 45s</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="1m" class="checkbox checkbox-sm" checked> 1m</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="5m" class="checkbox checkbox-sm" checked> 5m</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="15m" class="checkbox checkbox-sm"> 15m</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="1h" class="checkbox checkbox-sm"> 1h</label>
+                        </div>
+                    </div>
+                    
+                    <!-- NEW: Live regression options -->
+                    <div class="form-control">
+                        <label class="cursor-pointer label">
+                            <span class="label-text">Enable Live Updates</span>
+                            <input type="checkbox" id="enable-live-regression" class="toggle toggle-sm toggle-success" checked>
+                        </label>
+                        <label class="label">
+                            <span class="label-text-alt">Automatically update regression values in real-time (requires Live Mode)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="alert alert-info text-xs">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Live regression updates require Live Mode to be enabled. Historical analysis is always available.</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-action">
+                <button id="indicator-apply-btn" class="btn btn-primary">Apply</button>
+                <form method="dialog"><button class="btn">Close</button></form>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <script src="../dist/lightweight-charts.standalone.production.js"></script>
+    <script type="module" src="/main/main.js"></script>
+</body>
+</html>
