@@ -1,4 +1,4 @@
-// frontend_soa/main.js - Fixed with proper DOM handling
+// frontend_soa/main.js - Updated to remove debug files and match frontend_services
 import { store } from './src/state/store.js';
 import { sessionService } from './src/services/session.service.js';
 import { dataService } from './src/services/data.service.js';
@@ -9,10 +9,8 @@ import { populateSymbolSelect } from './src/ui/helpers.js';
 import { getDomElements, updateElementsCache } from './src/ui/dom.js';
 import { regressionTable } from './src/ui/components/regressionTable.js';
 import { drawingToolbar } from './src/ui/components/drawingToolbar.js';
-import { settingsManager } from './src/ui/settings.js';
 import { rangeControls } from './src/ui/rangeControls.js';
 
-// Define the main application class
 class App {
     constructor() {
         this.store = store;
@@ -22,23 +20,23 @@ class App {
         console.log('🚀 Application Initializing...');
         
         try {
-            // 1. Initialize UI Components FIRST (before getting DOM elements)
+            // 1. Initialize UI Components FIRST
             await this.initializeUIComponents();
 
             // 2. Get DOM elements AFTER components are created
             const elements = getDomElements();
 
-            // 3. Initialize UI listeners to capture user input
+            // 3. Initialize UI listeners
             initializeUiListeners(elements);
 
-            // 4. Initialize the Chart Controller to render data
+            // 4. Initialize the Chart Controller
             chartController.initialize(elements);
 
             // 5. Initialize all services
             dataService.initialize();
             indicatorService.initialize();
 
-            // 6. Start the session to get a token
+            // 6. Start the session
             console.log('Starting session...');
             await sessionService.startSession();
             
@@ -58,7 +56,6 @@ class App {
         } catch (error) {
             console.error('❌ Application initialization failed:', error);
             
-            // Show user-friendly error message
             const toastContainer = document.getElementById('toast-container');
             if (toastContainer) {
                 const toast = document.createElement('div');
@@ -78,7 +75,7 @@ class App {
         // Initialize regression table
         regressionTable.initialize();
         
-        // Replace indicator modal HTML with enhanced version BEFORE getting elements
+        // Replace indicator modal HTML with enhanced version
         this.replaceIndicatorModal();
         
         // Update elements cache after dynamic content creation
@@ -107,7 +104,7 @@ class App {
         const existingModal = document.getElementById('indicator_modal');
         if (!existingModal) return;
 
-        // Enhanced modal HTML with range controls
+        // Enhanced modal HTML with range controls (same as before)
         const enhancedModalHTML = `
             <dialog id="indicator_modal" class="modal">
                 <div class="modal-box w-11/12 max-w-2xl">
@@ -308,7 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
     app.init().catch(error => {
         console.error('Failed to initialize application:', error);
         
-        // Fallback error display
         document.body.innerHTML += `
             <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div class="bg-white p-6 rounded-lg shadow-lg max-w-md">

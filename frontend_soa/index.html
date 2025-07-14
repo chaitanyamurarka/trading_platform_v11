@@ -204,98 +204,82 @@
     <!-- Settings Modal -->
     <dialog id="settings_modal" class="modal">
         <div class="modal-box w-11/12 max-w-2xl">
-            <h3 class="font-bold text-lg mb-4">Chart Settings</h3>
-            
-            <!-- Tab buttons -->
-            <div class="tabs tabs-boxed mb-4">
-                <button class="tab tab-active" data-tab="chart-settings">Chart</button>
-                <button class="tab" data-tab="series-settings">Series</button>
+            <h3 class="font-bold text-lg">Chart Settings</h3>
+            <div class="tabs tabs-boxed my-4">
+                <a class="tab tab-active" data-tab="chart-settings-tab">Chart</a>
+                <a class="tab" data-tab="series-settings-tab">Series</a>
             </div>
             
-            <!-- Chart Settings Tab Content -->
-            <div id="chart-settings" class="tab-content">
-                <div class="space-y-4">
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">Grid Color</span>
-                        </label>
-                        <input type="color" id="setting-grid-color" class="input input-sm" value="#333333">
-                    </div>
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">Watermark Text</span>
-                        </label>
-                        <input type="text" id="setting-watermark-text" class="input input-sm input-bordered w-full" value="My Trading Platform">
-                    </div>
+            <div class="space-y-4 tab-content" id="chart-settings-tab">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Watermark Text</span>
+                    </label>
+                    <input type="text" id="setting-watermark-text" class="input input-sm input-bordered w-full" placeholder="My Trading Platform">
                 </div>
             </div>
 
-            <!-- Series Settings Tab Content -->
-            <div id="series-settings" class="tab-content hidden">
-                <div class="space-y-4">
-                    <div class="text-sm font-semibold mb-2">Candlestick/Bar Colors</div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Up Color</span>
-                            </label>
-                            <input type="color" id="setting-up-color" class="input input-sm" value="#10b981">
-                        </div>
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Down Color</span>
-                            </label>
-                            <input type="color" id="setting-down-color" class="input input-sm" value="#ef4444">
-                        </div>
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Wick Up Color</span>
-                            </label>
-                            <input type="color" id="setting-wick-up-color" class="input input-sm" value="#10b981">
-                        </div>
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Wick Down Color</span>
-                            </label>
-                            <input type="color" id="setting-wick-down-color" class="input input-sm" value="#ef4444">
-                        </div>
-                    </div>
-                    
-                    <div class="form-control mt-4">
-                        <label class="label cursor-pointer">
-                            <span class="label-text">Disable Wicks</span>
-                            <input type="checkbox" id="setting-disable-wicks" class="toggle toggle-sm">
-                        </label>
-                    </div>
-                    
+            <div class="space-y-4 tab-content hidden" id="series-settings-tab">
+                <p class="font-bold text-base">Candlestick/Bar Colors</p>
+                <div class="grid grid-cols-2 gap-4">
                     <div class="form-control">
-                        <label class="label cursor-pointer">
-                            <span class="label-text">Show OHLCV on Hover</span>
-                            <input type="checkbox" id="setting-show-ohlc-legend" class="toggle toggle-sm" checked>
+                        <label class="label">
+                            <span class="label-text">Up Color</span>
                         </label>
+                        <input type="color" id="setting-up-color" class="input input-sm w-full h-10" value="#10b981">
                     </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <div class="text-sm font-semibold mb-2">Volume Colors</div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Volume Up Color</span>
-                            </label>
-                            <input type="color" id="setting-vol-up-color" class="input input-sm" value="#10b981">
-                        </div>
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Volume Down Color</span>
-                            </label>
-                            <input type="color" id="setting-vol-down-color" class="input input-sm" value="#ef4444">
-                        </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Down Color</span>
+                        </label>
+                        <input type="color" id="setting-down-color" class="input input-sm w-full h-10" value="#ef4444">
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Wick Up</span>
+                        </label>
+                        <input type="color" id="setting-wick-up-color" class="input input-sm w-full h-10" value="#10b981">
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Wick Down</span>
+                        </label>
+                        <input type="color" id="setting-wick-down-color" class="input input-sm w-full h-10" value="#ef4444">
+                    </div>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Disable Wicks</span>
+                        <input type="checkbox" id="setting-disable-wicks" class="toggle toggle-sm" />
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Show OHLCV on Hover</span>
+                        <input type="checkbox" id="setting-show-ohlc-legend" class="toggle toggle-sm" checked />
+                    </label>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <p class="font-bold text-base">Volume Colors</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Up Color</span>
+                        </label>
+                        <input type="color" id="setting-vol-up-color" class="input input-sm w-full h-10" value="#10b981">
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Down Color</span>
+                        </label>
+                        <input type="color" id="setting-vol-down-color" class="input input-sm w-full h-10" value="#ef4444">
                     </div>
                 </div>
             </div>
             
-            <!-- Modal action buttons -->
             <div class="modal-action">
                 <form method="dialog">
                     <button class="btn">Close</button>

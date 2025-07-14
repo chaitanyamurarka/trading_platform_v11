@@ -1,4 +1,4 @@
-// frontend_soa/src/ui/dom.js - Updated with better element caching and debugging
+// frontend_soa/src/ui/dom.js - Updated to remove gridColorInput
 let elementsCache = null;
 
 export function getDomElements() {
@@ -18,7 +18,7 @@ export function getDomElements() {
         
         // Toggles & Buttons
         liveToggle: document.getElementById('live-toggle'),
-        themeToggle: document.querySelector('#theme-toggle input[type="checkbox"]'), // Get the checkbox itself
+        themeToggle: document.querySelector('#theme-toggle input[type="checkbox"]'),
         screenshotBtn: document.getElementById('screenshot-btn'),
 
         // Regression Table
@@ -32,14 +32,13 @@ export function getDomElements() {
         startTimeInput: document.getElementById('start_time'),
         endTimeInput: document.getElementById('end_time'),
 
-        // Modal buttons and modals - Always get fresh references
+        // Modal buttons and modals
         indicatorModalBtn: document.getElementById('indicator-modal-btn'),
         settingsModalBtn: document.getElementById('settings-modal-btn'),
         settingsModal: document.getElementById('settings_modal'),
         indicatorModal: document.getElementById('indicator_modal'),
         
-        // Settings inputs - Get fresh references each time
-        gridColorInput: document.getElementById('setting-grid-color'),
+        // Settings inputs - REMOVED gridColorInput
         watermarkInput: document.getElementById('setting-watermark-text'),
         upColorInput: document.getElementById('setting-up-color'),
         downColorInput: document.getElementById('setting-down-color'),
@@ -50,14 +49,14 @@ export function getDomElements() {
         disableWicksInput: document.getElementById('setting-disable-wicks'),
         showOHLCLegendToggle: document.getElementById('setting-show-ohlc-legend'),
 
-        // Indicator inputs - Get fresh references each time
+        // Indicator inputs
         indicatorApplyBtn: document.getElementById('indicator-apply-btn'),
         indicatorSelect: document.getElementById('indicator-select'),
         regressionLengthInput: document.getElementById('indicator-regression-length'),
         lookbackPeriodsInput: document.getElementById('indicator-lookback-periods'),
         timeframesContainer: document.getElementById('indicator-timeframes'),
 
-        // Range control elements - Get fresh references each time
+        // Range control elements
         minLookbackSlider: document.getElementById('min-lookback-slider'),
         minLookbackInput: document.getElementById('min-lookback-input'),
         maxLookbackSlider: document.getElementById('max-lookback-slider'),
@@ -67,7 +66,7 @@ export function getDomElements() {
         lookbackPreview: document.getElementById('lookback-preview'),
         periodCount: document.getElementById('period-count'),
 
-        // Drawing toolbar elements (will be created dynamically)
+        // Drawing toolbar elements
         drawingToolbar: document.getElementById('drawing-toolbar'),
         autoScaleBtn: document.getElementById('scaling-auto-btn'),
         linearScaleBtn: document.getElementById('scaling-linear-btn'),
@@ -75,32 +74,6 @@ export function getDomElements() {
         // Data legend
         dataLegend: document.getElementById('data-legend'),
     };
-
-    // Debug logging in development
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.group('🔍 DOM Elements Debug');
-        
-        // Count missing elements
-        const missingElements = Object.entries(elementsCache)
-            .filter(([key, element]) => !element)
-            .map(([key]) => key);
-            
-        if (missingElements.length > 0) {
-            console.warn('⚠️ Missing elements:', missingElements);
-        } else {
-            console.log('✅ All elements found');
-        }
-        
-        // Check for critical missing elements
-        const criticalElements = ['chartContainer', 'settingsModal', 'indicatorModal'];
-        const missingCritical = criticalElements.filter(el => !elementsCache[el]);
-        
-        if (missingCritical.length > 0) {
-            console.error('❌ Critical elements missing:', missingCritical);
-        }
-        
-        console.groupEnd();
-    }
 
     return elementsCache;
 }

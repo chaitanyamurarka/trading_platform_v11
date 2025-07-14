@@ -1,365 +1,200 @@
-/* Enhanced Settings Modal CSS with debugging support */
+/* Fixed settings modal styles for frontend_soa/styles/main.css */
 
-/* FIXED: Settings modal specific styles with better structure */
-#settings_modal {
-    z-index: 1000;
+/* Modal backdrop with proper theming */
+.modal {
+    background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(1px);
 }
 
-#settings_modal .modal-box {
+/* Modal box with theme-aware background */
+.modal-box {
     background-color: hsl(var(--b1));
     color: hsl(var(--bc));
-    border: 1px solid rgba(var(--bc), 0.1);
+    border: 1px solid hsl(var(--b3));
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
-/* Tab container styling */
-#settings_modal .tabs {
-    display: flex;
-    gap: 0;
-    padding: 0.25rem;
+/* Ensure the modal-box has proper background in both themes */
+[data-theme="dark"] .modal-box {
+    background-color: hsl(215 28% 17%); /* Matches dark theme background */
+}
+
+[data-theme="light"] .modal-box {
+    background-color: hsl(0 0% 100%); /* White background for light theme */
+}
+
+/* Tab container with theme background */
+.modal-box .tabs {
     background-color: hsl(var(--b2));
+    padding: 0.25rem;
     border-radius: 0.5rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid rgba(var(--bc), 0.1);
 }
 
-/* Individual tab styling */
-#settings_modal .tab {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 0.375rem;
-    transition: all 0.2s ease;
+/* Tab styling */
+.modal-box .tab {
+    color: hsl(var(--bc));
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+
+.modal-box .tab:hover {
+    opacity: 1;
+}
+
+.modal-box .tab-active {
+    background-color: hsl(var(--b1));
+    color: hsl(var(--bc));
+    opacity: 1;
+    font-weight: 600;
+}
+
+/* Tab content visibility */
+.tab-content {
+    display: block;
+}
+
+.tab-content.hidden {
+    display: none !important;
+}
+
+/* Form controls */
+.modal-box .form-control {
+    margin-bottom: 1rem;
+}
+
+.modal-box .form-control:last-child {
+    margin-bottom: 0;
+}
+
+.modal-box .label {
+    color: hsl(var(--bc));
+    padding: 0.5rem 0;
+}
+
+.modal-box .label-text {
+    font-size: 0.875rem;
     font-weight: 500;
-    text-align: center;
-    color: hsl(var(--bc));
-    font-size: 0.875rem;
-    margin: 0.125rem;
-    min-height: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#settings_modal .tab:hover {
-    background-color: rgba(var(--bc), 0.1);
-    transform: translateY(-1px);
-}
-
-#settings_modal .tab-active {
-    background-color: hsl(var(--p)) !important;
-    color: hsl(var(--pc)) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    font-weight: 600;
-}
-
-/* Tab content styling */
-#settings_modal .tab-content {
-    padding: 0;
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-#settings_modal .tab-content.hidden {
-    display: none;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Form control styling */
-#settings_modal .form-control {
-    margin-bottom: 1.5rem;
-}
-
-#settings_modal .label {
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-#settings_modal .label-text {
-    font-weight: 600;
-    color: hsl(var(--bc));
-    font-size: 0.875rem;
 }
 
 /* Input styling */
-#settings_modal input[type="color"] {
+.modal-box input[type="text"] {
+    background-color: hsl(var(--b2));
+    color: hsl(var(--bc));
+    border: 1px solid hsl(var(--bc) / 0.2);
+}
+
+.modal-box input[type="text"]:focus {
+    outline: 2px solid hsl(var(--p));
+    outline-offset: 2px;
+}
+
+/* Color inputs */
+.modal-box input[type="color"] {
     width: 100%;
-    height: 3rem;
-    border: 2px solid rgba(var(--bc), 0.2);
-    border-radius: 0.5rem;
+    height: 2.5rem;
+    border: 1px solid hsl(var(--bc) / 0.2);
+    border-radius: 0.375rem;
     cursor: pointer;
-    background: hsl(var(--b1));
-    transition: all 0.2s ease;
+    background-color: hsl(var(--b2));
+}
+
+.modal-box input[type="color"]::-webkit-color-swatch-wrapper {
     padding: 0.25rem;
 }
 
-#settings_modal input[type="color"]:hover {
-    border-color: hsl(var(--p));
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-#settings_modal input[type="color"]:focus {
-    outline: none;
-    border-color: hsl(var(--p));
-    box-shadow: 0 0 0 3px rgba(var(--p), 0.1);
-}
-
-#settings_modal input[type="text"],
-#settings_modal input[type="number"] {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid rgba(var(--bc), 0.2);
-    border-radius: 0.5rem;
-    background: hsl(var(--b1));
-    color: hsl(var(--bc));
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-}
-
-#settings_modal input[type="text"]:hover,
-#settings_modal input[type="number"]:hover {
-    border-color: rgba(var(--bc), 0.3);
-    transform: translateY(-1px);
-}
-
-#settings_modal input[type="text"]:focus,
-#settings_modal input[type="number"]:focus {
-    outline: none;
-    border-color: hsl(var(--p));
-    box-shadow: 0 0 0 3px rgba(var(--p), 0.1);
+.modal-box input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 0.25rem;
 }
 
 /* Toggle styling */
-#settings_modal .toggle {
-    --tglbg: rgba(var(--bc), 0.2);
-    --handleoffset: 1.5rem;
-    transition: all 0.2s ease;
+.modal-box .toggle {
+    --tglbg: hsl(var(--b3));
 }
 
-#settings_modal .toggle:checked {
+.modal-box .toggle:checked {
     --tglbg: hsl(var(--p));
 }
 
-#settings_modal .toggle:hover {
-    transform: scale(1.05);
+/* Divider styling */
+.modal-box .divider {
+    margin: 1.5rem 0;
+    height: 1px;
+    background: hsl(var(--bc) / 0.1);
+}
+
+.modal-box .divider::before,
+.modal-box .divider::after {
+    background: transparent;
 }
 
 /* Grid layout */
-#settings_modal .grid {
-    gap: 1.5rem;
+.modal-box .grid {
+    display: grid;
+    gap: 1rem;
 }
 
-#settings_modal .grid-cols-2 {
-    display: grid;
+.modal-box .grid-cols-2 {
     grid-template-columns: repeat(2, 1fr);
 }
 
-/* Divider styling */
-#settings_modal .divider {
-    margin: 2rem 0;
-    height: 1px;
-    background: linear-gradient(to right, transparent, rgba(var(--bc), 0.2), transparent);
-    border: none;
-}
-
-/* Section headers */
-#settings_modal .text-sm.font-semibold {
-    color: hsl(var(--p));
-    font-weight: 600;
+/* Text styling */
+.modal-box p.font-bold {
+    color: hsl(var(--bc));
+    margin-bottom: 0.75rem;
     font-size: 1rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid rgba(var(--p), 0.2);
-}
-
-/* Label cursor pointer for toggles */
-#settings_modal .label.cursor-pointer {
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    transition: background-color 0.2s ease;
-}
-
-#settings_modal .label.cursor-pointer:hover {
-    background-color: rgba(var(--bc), 0.05);
 }
 
 /* Modal action buttons */
-#settings_modal .modal-action {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid rgba(var(--bc), 0.1);
+.modal-box .modal-action {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid hsl(var(--bc) / 0.1);
 }
 
-#settings_modal .modal-action .btn {
-    min-width: 6rem;
-    font-weight: 500;
+/* Success/Error text colors */
+.text-success {
+    color: hsl(var(--su));
 }
 
-/* Color preview for better UX */
-#settings_modal input[type="color"]::before {
-    content: '';
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 1rem;
-    height: 1rem;
-    background: currentColor;
-    border-radius: 50%;
-    pointer-events: none;
+.text-error {
+    color: hsl(var(--er));
 }
 
-/* Responsive adjustments for settings modal */
+/* Regression table styling */
+#regression-table-container {
+    transition: all 0.3s ease-in-out;
+    padding: 1rem;
+    background-color: hsl(var(--b1));
+}
+
+#regression-table-container.hidden {
+    display: none;
+}
+
+#regression-table {
+    background-color: hsl(var(--b1));
+}
+
+#regression-table th {
+    background-color: hsl(var(--b2));
+    color: hsl(var(--bc));
+    font-weight: 600;
+}
+
+#regression-table td {
+    color: hsl(var(--bc));
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
-    #settings_modal .modal-box {
+    .modal-box {
         width: 95vw;
         max-width: 95vw;
         margin: 1rem;
     }
     
-    #settings_modal .grid-cols-2 {
+    .modal-box .grid-cols-2 {
         grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    #settings_modal .tabs {
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-    
-    #settings_modal .tab {
-        margin: 0;
-        width: 100%;
-    }
-}
-
-/* Debug styles - remove in production */
-.debug #settings_modal * {
-    outline: 1px solid rgba(255, 0, 0, 0.2);
-}
-
-.debug #settings_modal .tab {
-    outline: 2px solid rgba(0, 255, 0, 0.3);
-}
-
-.debug #settings_modal .tab-active {
-    outline: 2px solid rgba(0, 0, 255, 0.5);
-}
-
-/* Enhanced visual feedback */
-#settings_modal .form-control:focus-within {
-    transform: translateY(-1px);
-}
-
-#settings_modal .form-control:focus-within .label-text {
-    color: hsl(var(--p));
-}
-
-/* Better spacing for nested elements */
-#settings_modal .space-y-4 > * + * {
-    margin-top: 1.5rem;
-}
-
-/* Input validation states */
-#settings_modal .input-error {
-    border-color: hsl(var(--er)) !important;
-    box-shadow: 0 0 0 3px rgba(var(--er), 0.1) !important;
-}
-
-#settings_modal .input-success {
-    border-color: hsl(var(--su)) !important;
-    box-shadow: 0 0 0 3px rgba(var(--su), 0.1) !important;
-}
-
-/* Loading state for settings */
-#settings_modal.loading {
-    pointer-events: none;
-    opacity: 0.7;
-}
-
-#settings_modal.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 2rem;
-    height: 2rem;
-    margin: -1rem 0 0 -1rem;
-    border: 2px solid rgba(var(--p), 0.2);
-    border-top: 2px solid hsl(var(--p));
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Theme-specific adjustments */
-[data-theme="dark"] #settings_modal .modal-box {
-    background-color: hsl(var(--b1));
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="light"] #settings_modal .modal-box {
-    background-color: hsl(var(--b1));
-    border-color: rgba(0, 0, 0, 0.1);
-}
-
-/* Ensure proper stacking context */
-#settings_modal {
-    z-index: 1000;
-}
-
-#settings_modal .modal-backdrop {
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-}
-
-/* Success/error feedback */
-.settings-feedback {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    z-index: 1100;
-    animation: slideIn 0.3s ease-out;
-}
-
-.settings-feedback.success {
-    background-color: hsl(var(--su));
-    color: hsl(var(--suc));
-}
-
-.settings-feedback.error {
-    background-color: hsl(var(--er));
-    color: hsl(var(--erc));
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
     }
 }
