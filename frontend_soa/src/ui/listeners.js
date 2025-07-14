@@ -2,7 +2,10 @@
 import { store } from '../state/store.js';
 import { indicatorService } from '../services/indicator.service.js';
 import { chartController } from '../chart/chart.controller.js';
-import { setAutomaticDateTime, showToast } from './helpers.js';
+import { 
+    setAutomaticDateTime, 
+    showToast,
+    populateSymbolSelect } from './helpers.js';
 import { settingsManager } from './settings.js';
 import { rangeControls } from './rangeControls.js';
 
@@ -17,7 +20,15 @@ export function initializeUiListeners(elements) {
     };
 
     // Chart Parameter Listeners
-    safeAddListener(elements.exchangeSelect, 'change', (e) => store.set('selectedExchange', e.target.value), 'exchangeSelect');
+    // Exchange selection listener
+    safeAddListener(elements.exchangeSelect, 'change', (e) => {
+        const newExchange = e.target.value;
+        store.set('selectedExchange', newExchange);
+
+        // Re-populate the symbols based on the newly selected exchange
+        const allSymbols = store.get('availableSymbols');
+        populateSymbolSelect(allSymbols, newExchange);
+    }, 'exchangeSelect');
     safeAddListener(elements.symbolSelect, 'change', (e) => store.set('selectedSymbol', e.target.value), 'symbolSelect');
     safeAddListener(elements.intervalSelect, 'change', (e) => store.set('selectedInterval', e.target.value), 'intervalSelect');
     safeAddListener(elements.candleTypeSelect, 'change', (e) => store.set('selectedCandleType', e.target.value), 'candleTypeSelect');

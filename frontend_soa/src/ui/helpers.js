@@ -126,18 +126,31 @@ export function populateExchangeSelect(symbols) {
 
 /**
  * Populates the symbol select dropdown.
- * @param {Array<{symbol: string}>} symbols - An array of symbol objects.
+ * @param {Array<{symbol: string, exchange: string}>} symbols - An array of symbol objects.
+ * @param {string} [exchange] - Optional: The exchange to filter by.
  */
-export function populateSymbolSelect(symbols) {
+export function populateSymbolSelect(symbols, exchange = null) {
     const { symbolSelect } = getDomElements();
     if (!symbolSelect) return;
-    
+
     symbolSelect.innerHTML = ''; // Clear existing options
-    
-    symbols.forEach(s => {
+
+    // Filter symbols by the selected exchange if one is provided
+    const filteredSymbols = exchange
+        ? symbols.filter(s => s.exchange === exchange)
+        : symbols;
+
+    filteredSymbols.forEach(s => {
         const option = document.createElement('option');
         option.value = s.symbol;
         option.textContent = s.symbol;
         symbolSelect.appendChild(option);
     });
+
+    // Automatically select the first symbol in the filtered list
+    if (filteredSymbols.length > 0) {
+        store.set('selectedSymbol', filteredSymbols[0].symbol);
+    } else {
+        store.set('selectedSymbol', null); // Or handle no symbols case
+    }
 }

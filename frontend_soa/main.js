@@ -5,9 +5,12 @@ import { dataService } from './src/services/data.service.js';
 import { indicatorService } from './src/services/indicator.service.js';
 import { chartController } from './src/chart/chart.controller.js';
 import { initializeUiListeners } from './src/ui/listeners.js';
-import { populateSymbolSelect
-    , populateExchangeSelect } from './src/ui/helpers.js'; // Import our new function
-import { getDomElements, updateElementsCache } from './src/ui/dom.js';
+import { 
+    populateSymbolSelect,
+    populateExchangeSelect } from './src/ui/helpers.js'; // Import our new function
+import { 
+    getDomElements, 
+    updateElementsCache } from './src/ui/dom.js';
 import { regressionTable } from './src/ui/components/regressionTable.js';
 import { drawingToolbar } from './src/ui/components/drawingToolbar.js';
 import { rangeControls } from './src/ui/rangeControls.js';
@@ -45,16 +48,18 @@ class App {
             console.log('Fetching symbols...');
             const symbols = await sessionService.fetchSymbols();
             if (symbols && symbols.length > 0) {
-                populateExchangeSelect(symbols); // Populate the exchanges first
-                populateSymbolSelect(symbols);    // Then populate the symbols
-
-                // Set the initial selected symbol and exchange from the first symbol
-                const firstSymbol = symbols[0];
-                this.store.set('selectedSymbol', firstSymbol.symbol);
+                populateExchangeSelect(symbols);
                 
+                // Get the initially selected exchange
+                const initialExchange = store.get('selectedExchange') || symbols[0].exchange;
+                
+                // Populate symbols for the initial exchange
+                populateSymbolSelect(symbols, initialExchange);
+                
+                // Set the initial selected symbol and exchange
                 const elements = getDomElements();
-                elements.exchangeSelect.value = firstSymbol.exchange; // Set the dropdown value
-                this.store.set('selectedExchange', firstSymbol.exchange); // And update the state
+                elements.exchangeSelect.value = initialExchange;
+                store.set('selectedExchange', initialExchange);
 
                 console.log(`Symbols loaded: ${symbols.length} symbols`);
             } else {
