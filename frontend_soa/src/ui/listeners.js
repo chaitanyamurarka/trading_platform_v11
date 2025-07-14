@@ -90,6 +90,9 @@ export function initializeUiListeners(elements) {
         const timeframeCheckboxes = elements.timeframesContainer?.querySelectorAll('input[type="checkbox"]:checked');
         const timeframes = timeframeCheckboxes ? Array.from(timeframeCheckboxes).map(cb => cb.value) : ['1m', '5m', '15m'];
         
+        // Get the state of the live updates toggle
+        const enableLive = document.getElementById('enable-live-regression')?.checked || false;
+
         if (isNaN(length) || length < 2) {
             showToast('Regression Length must be at least 2.', 'error');
             return;
@@ -105,7 +108,7 @@ export function initializeUiListeners(elements) {
             return;
         }
         
-        const settings = { length, lookbackPeriods, timeframes };
+        const settings = { length, lookbackPeriods, timeframes, enableLive }; // Add enableLive to settings
         indicatorService.runRegressionAnalysis(settings);
         
         // Close modal

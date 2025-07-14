@@ -20,6 +20,14 @@ class RegressionTable {
             this.render(results);
         });
 
+        // Show live status
+        this.store.subscribe('isLiveRegressionConnected', (isConnected) => {
+            const liveStatusBadge = document.getElementById('live-regression-status');
+            if (liveStatusBadge) {
+                liveStatusBadge.classList.toggle('hidden', !isConnected);
+            }
+        });
+
         console.log('RegressionTable Component Initialized');
     }
 

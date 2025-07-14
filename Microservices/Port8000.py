@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.websockets import WebSocketState
 import redis.asyncio as aioredis
 import secrets
 import httpx
@@ -302,7 +303,7 @@ async def websocket_proxy_regular(
         logger.error(f"Could not connect to backend WebSocket at {backend_uri}: {e}")
     finally:
         # Ensure client connection is closed if it's still open
-        if client_ws.client_state != "disconnected":
+        if client_ws.client_state != WebSocketState.DISCONNECTED:
             await client_ws.close()
         
         logger.info(f"Closed proxy connection for regular data: {symbol}/{interval}/{timezone}")
@@ -403,7 +404,7 @@ async def websocket_proxy_heikin_ashi(
         logger.error(f"Could not connect to backend WebSocket at {backend_uri}: {e}")
     finally:
         # Ensure client connection is closed if it's still open
-        if client_ws.client_state != "disconnected":
+        if client_ws.client_state != WebSocketState.DISCONNECTED:
             await client_ws.close()
         
         # --- FIX: Corrected log message ---
@@ -502,7 +503,7 @@ async def websocket_proxy_live_regression(
         logger.error(f"Could not connect to backend WebSocket at {backend_uri}: {e}")
     finally:
         # Ensure client connection is closed if it's still open
-        if client_ws.client_state != "disconnected":
+        if client_ws.client_state != WebSocketState.DISCONNECTED:
             await client_ws.close()
         
         logger.info(f"Closed proxy connection for live regression: {symbol}/{exchange}")

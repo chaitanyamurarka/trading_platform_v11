@@ -1,6 +1,7 @@
 // frontend_soa/src/services/indicator.service.js
 import { store } from '../state/store.js';
 import { showToast } from '../ui/helpers.js';
+import { liveIndicatorService } from './liveIndicator.service.js'; // Import the new service
 
 const API_BASE_URL = `http://${window.location.hostname}:8000`;
 
@@ -10,11 +11,10 @@ class IndicatorService {
     }
 
     initialize() {
-        // Could subscribe to symbol changes to auto-update indicators
         console.log('IndicatorService Initialized');
     }
 
-    async runRegressionAnalysis(settings) {
+    async runRegressionAnalysis(settings) { // 'enableLive' is now part of 'settings'
         this.store.set('isIndicatorLoading', true);
         this.store.set('isIndicatorActive', true);
 
@@ -39,6 +39,15 @@ class IndicatorService {
             this.store.set('regressionResults', results);
             showToast('Regression analysis complete.', 'success');
 
+            // Connect to live regression if enabled
+            if (settings.enableLive && this.store.get('isLiveMode')) {
+                liveIndicatorService.connect({
+                    ...requestBody, 
+                    regression_length: settings.length, 
+                    lookback_periods: settings.lookbackPeriods
+                });
+            }
+
         } catch (error) {
             console.error('Failed to run regression analysis:', error);
             showToast(error.message, 'error');
@@ -51,6 +60,7 @@ class IndicatorService {
     removeRegressionAnalysis() {
         this.store.set('isIndicatorActive', false);
         this.store.set('regressionResults', null);
+        liveIndicatorService.disconnect(); // Disconnect live regression
         showToast('Indicator removed.', 'info');
     }
 }

@@ -62,6 +62,8 @@ class DataService {
             return;
         }
 
+        websocketService.disconnect();
+
         this.isFetching = true;
         this.store.set('isLoading', true);
         
@@ -122,6 +124,16 @@ class DataService {
             
             // Process any buffered websocket messages
             websocketService.setLoadingState(false);
+
+            if (this.store.get('isLiveMode')) {
+                const params = {
+                    symbol: this.store.get('selectedSymbol'),
+                    interval: this.store.get('selectedInterval'),
+                    timezone: this.store.get('selectedTimezone'),
+                    candleType: this.store.get('selectedCandleType'),
+                };
+                websocketService.connect(params);
+            }
         }
     }
 
