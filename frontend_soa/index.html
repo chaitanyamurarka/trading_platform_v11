@@ -65,6 +65,42 @@
                         <label for="end_time" class="text-sm">End Time</label>
                         <input id="end_time" type="datetime-local" class="input input-bordered input-sm w-full">
                     </div>
+                    
+                    <div id="moved-controls" class="md:hidden">
+                        <div class="divider"></div>
+                         <div class="flex items-center flex-wrap gap-x-4 gap-y-2 py-2">
+                            <div class="form-control flex flex-row items-center">
+                                <label for="live-toggle" class="label cursor-pointer py-0">
+                                    <span class="label-text mr-2">Live</span>
+                                    <input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-primary">
+                                </label>
+                            </div>
+                            <select id="timezone" class="select select-bordered select-sm">
+                                <option value="Etc/UTC">UTC</option>
+                                <option value="Europe/London">London</option>
+                                <option value="America/New_York" selected>New York</option>
+                                <option value="Asia/Kolkata">Kolkata</option>
+                            </select>
+                            <div class="form-control">
+                                <select id="candle-type-select" class="select select-bordered select-sm">
+                                    <option value="regular" selected>Regular</option>
+                                    <option value="heikin_ashi">Heikin Ashi</option>
+                                </select>
+                            </div>
+                            <select id="chart-type" class="select select-bordered select-sm">
+                                <option value="candlestick" selected>Candlestick</option>
+                                <option value="bar">Bar</option>
+                                <option value="line">Line</option>
+                                <option value="area">Area</option>
+                            </select>
+                            <button id="screenshot-btn" class="btn btn-sm btn-ghost"><i class="fas fa-camera"></i></button>
+                            <button id="indicator-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-chart-bar"></i> Indicators</button>
+                            <button id="settings-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-cog"></i></button>
+                        </div>
+                        <div class="divider"></div>
+                        <div id="drawing-toolbar-moved" class="flex items-center justify-center gap-2 p-2 bg-base-100 border-t border-base-300">
+                            </div>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -75,33 +111,35 @@
                     <button id="menu-toggle" class="btn btn-ghost md:hidden">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
-                    <div class="form-control flex flex-row items-center">
-                        <label for="live-toggle" class="label cursor-pointer py-0">
-                            <span class="label-text mr-2">Live</span>
-                            <input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-primary">
-                        </label>
-                    </div>
-                    <select id="timezone" class="select select-bordered select-sm">
-                        <option value="Etc/UTC">UTC</option>
-                        <option value="Europe/London">London</option>
-                        <option value="America/New_York" selected>New York</option>
-                        <option value="Asia/Kolkata">Kolkata</option>
-                    </select>
-                    <div class="form-control">
-                        <select id="candle-type-select" class="select select-bordered select-sm">
-                            <option value="regular" selected>Regular</option>
-                            <option value="heikin_ashi">Heikin Ashi</option>
+                    <div id="top-bar-controls" class="hidden md:flex items-center flex-wrap gap-x-4 gap-y-2 py-2">
+                        <div class="form-control flex flex-row items-center">
+                            <label for="live-toggle" class="label cursor-pointer py-0">
+                                <span class="label-text mr-2">Live</span>
+                                <input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-primary">
+                            </label>
+                        </div>
+                        <select id="timezone" class="select select-bordered select-sm">
+                            <option value="Etc/UTC">UTC</option>
+                            <option value="Europe/London">London</option>
+                            <option value="America/New_York" selected>New York</option>
+                            <option value="Asia/Kolkata">Kolkata</option>
                         </select>
+                        <div class="form-control">
+                            <select id="candle-type-select" class="select select-bordered select-sm">
+                                <option value="regular" selected>Regular</option>
+                                <option value="heikin_ashi">Heikin Ashi</option>
+                            </select>
+                        </div>
+                        <select id="chart-type" class="select select-bordered select-sm">
+                            <option value="candlestick" selected>Candlestick</option>
+                            <option value="bar">Bar</option>
+                            <option value="line">Line</option>
+                            <option value="area">Area</option>
+                        </select>
+                        <button id="screenshot-btn" class="btn btn-sm btn-ghost"><i class="fas fa-camera"></i></button>
+                        <button id="indicator-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-chart-bar"></i> Indicators</button>
+                        <button id="settings-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-cog"></i></button>
                     </div>
-                    <select id="chart-type" class="select select-bordered select-sm">
-                        <option value="candlestick" selected>Candlestick</option>
-                        <option value="bar">Bar</option>
-                        <option value="line">Line</option>
-                        <option value="area">Area</option>
-                    </select>
-                    <button id="screenshot-btn" class="btn btn-sm btn-ghost"><i class="fas fa-camera"></i></button>
-                    <button id="indicator-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-chart-bar"></i> Indicators</button>
-                    <button id="settings-modal-btn" class="btn btn-sm btn-ghost"><i class="fas fa-cog"></i></button>
                 </div>
                 
                 <label class="swap swap-rotate" id="theme-toggle">
@@ -121,6 +159,9 @@
                     </div>
                 </div>
             </div>
+
+            <div id="drawing-toolbar" class="hidden md:flex items-center justify-center gap-2 p-2 bg-base-100 border-t border-base-300">
+                </div>
 
             <div id="regression-table-container" class="hidden">
                 <div class="flex items-center gap-3 mb-3">
