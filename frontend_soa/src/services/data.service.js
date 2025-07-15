@@ -42,6 +42,11 @@ class DataService {
                     candleType: this.store.get('selectedCandleType'),
                 };
                 websocketService.connect(params);
+                
+                // Trigger auto-scaling when live mode is enabled
+                import('../ui/components/drawingToolbar.js').then(({ drawingToolbar }) => {
+                    drawingToolbar.triggerAutoScaling();
+                });
             });
         } else {
             websocketService.disconnect();
@@ -124,6 +129,11 @@ class DataService {
             
             // Process any buffered websocket messages
             websocketService.setLoadingState(false);
+
+            // Apply autoscaling after loading data (like frontend_services)
+            import('../ui/components/drawingToolbar.js').then(({ drawingToolbar }) => {
+                drawingToolbar.triggerAutoScaling();
+            });
 
             if (this.store.get('isLiveMode')) {
                 const params = {

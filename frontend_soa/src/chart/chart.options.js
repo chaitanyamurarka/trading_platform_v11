@@ -24,7 +24,7 @@ export const getChartOptions = (theme) => {
             timeVisible: true,
             secondsVisible: true,
             borderColor: gridColor,
-            shiftVisibleRangeOnNewBar: false,
+            shiftVisibleRangeOnNewBar: true, // Enable auto-scrolling with new bars
         },
         watermark: {
             color: 'rgba(150, 150, 150, 0.2)',

@@ -176,6 +176,14 @@ class ChartController {
             // Auto-scale and fit content after loading
             this.chart.timeScale().fitContent();
             this.applyAutoscaling();
+            
+            // Ensure auto-scrolling is enabled if auto-scale button is active
+            const autoScaleBtn = document.getElementById('scaling-auto-btn');
+            if (autoScaleBtn && autoScaleBtn.classList.contains('btn-active')) {
+                this.chart.timeScale().applyOptions({ 
+                    shiftVisibleRangeOnNewBar: true 
+                });
+            }
         }
     }
     

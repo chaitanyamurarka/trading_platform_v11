@@ -134,6 +134,13 @@ class DrawingToolbar {
 
         // Apply autoscale using chart controller method
         chartController.applyAutoscaling();
+        
+        // Enable auto-scrolling when in auto mode
+        chart.timeScale().applyOptions({ 
+            shiftVisibleRangeOnNewBar: true,
+            rightOffset: 12 
+        });
+        
         this.autoScaleActive = true;
     }
 
@@ -142,7 +149,10 @@ class DrawingToolbar {
         if (!chart) return;
 
         chart.priceScale().applyOptions({ autoScale: false });
-        chart.timeScale().applyOptions({ rightOffset: 0 });
+        chart.timeScale().applyOptions({ 
+            rightOffset: 0,
+            shiftVisibleRangeOnNewBar: false // Disable auto-scrolling in linear mode
+        });
         this.autoScaleActive = false;
     }
 
