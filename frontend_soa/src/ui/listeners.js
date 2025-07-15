@@ -136,6 +136,15 @@ export function initializeUiListeners(elements) {
             setTimeout(() => settingsManager.initialize(), 100);
         }
     }, 'settingsModalBtn');
+    
+    // Sidebar Toggle Listener
+    const toggleSidebar = () => {
+        elements.sidebar?.classList.toggle('open');
+        elements.sidebarOverlay?.classList.toggle('hidden');
+    };
+    safeAddListener(elements.menuToggle, 'click', toggleSidebar, 'menuToggle');
+    safeAddListener(elements.sidebarOverlay, 'click', toggleSidebar, 'sidebarOverlay');
+
 
     // Initialize theme from localStorage
     initializeThemeFromStorage(elements);

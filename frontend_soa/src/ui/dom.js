@@ -7,6 +7,9 @@ export function getDomElements() {
         // Main layout
         chartContainer: document.getElementById('chart-container'),
         loadingIndicator: document.getElementById('loading-indicator'),
+        sidebar: document.getElementById('sidebar'),
+        sidebarOverlay: document.getElementById('sidebar-overlay'),
+        menuToggle: document.getElementById('menu-toggle'),
         
         // Controls
         exchangeSelect: document.getElementById('exchange'),
