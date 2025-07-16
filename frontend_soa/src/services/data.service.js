@@ -3,6 +3,7 @@ import { store } from '../state/store.js';
 import { showToast } from '../ui/helpers.js';
 import { websocketService } from './websocket.service.js';
 import { setAutomaticDateTime } from '../ui/helpers.js';
+import { indicatorService } from './indicator.service.js';
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
@@ -93,9 +94,18 @@ class DataService {
         }
 
         websocketService.disconnect();
-
+        indicatorService.removeRegressionAnalysis();
+        
         this.isFetching = true;
         this.store.set('isLoading', true);
+
+        // Reset chart data arrays. Indicator data is now handled by the line above.
+        this.store.set('chartData', []);
+        this.store.set('volumeData', []);
+        this.store.set('dataRequestId', null);
+        this.store.set('allDataLoaded', false);
+        
+        websocketService.setLoadingState(true);
         
         // Reset all data arrays before loading new data
         this.resetAllData();
