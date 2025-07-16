@@ -238,6 +238,7 @@ class RegressionCalculationContext:
     historical_candles: List[Candle] = field(default_factory=list)
     live_candles: List[Candle] = field(default_factory=list)
     last_calculation_time: Optional[datetime] = None
+    resampler: Optional[Any] = None
 
 class LiveRegressionService:
     """Service for providing real-time linear regression calculations."""
@@ -267,6 +268,11 @@ class LiveRegressionService:
                         regression_length=subscription.regression_length,
                         lookback_periods=subscription.lookback_periods
                     )
+
+                    is_tick_based = 'tick' in timeframe
+                    resampler_class = TickBarResampler if is_tick_based else BarResampler
+                    context.resampler = resampler_class(timeframe, subscription.timezone)
+                        
                     self.calculation_contexts[context_key] = context
                     
                     # Load historical data for this timeframe
@@ -514,7 +520,6 @@ class LiveRegressionService:
             logger.error(f"Service failures: Error in Redis message handler for {symbol}: {e}", exc_info=True) # ERROR: Service failures
     
     async def _process_new_tick(self, symbol: str, tick_data: dict):
-        """Process a new tick and update relevant calculation contexts for all timeframes."""
         relevant_contexts = [
             (key, context) for key, context in self.calculation_contexts.items()
             if context.symbol == symbol
@@ -522,29 +527,23 @@ class LiveRegressionService:
         
         for context_key, context in relevant_contexts:
             try:
-                cache_key = f"intraday_ticks:{symbol}"
-                cached_ticks_str = await self.redis_client.lrange(cache_key, 0, -1)
-                all_ticks = []
-                if cached_ticks_str:
-                    all_ticks = [json.loads(t) for t in cached_ticks_str]
+                # Process only the new tick!
+                completed_bar = context.resampler.add_bar(tick_data)
                 
-                resampled_bars = await resample_ticks_to_bars(
-                    all_ticks, context.interval, context.timezone
-                )
-                logger.debug(f"Data transformation steps: Resampled {len(all_ticks)} ticks into {len(resampled_bars)} bars for {context_key}.") # DEBUG: Data transformation steps
-                
-                if resampled_bars:
-                    context.live_candles = sorted(
-                        resampled_bars,
-                        key=lambda c: c.unix_timestamp,
-                        reverse=True
-                    )
+                if completed_bar:
+                    # Add the completed bar to live_candles
+                    context.live_candles.insert(0, completed_bar)
                     
+                    # Trim live_candles to a reasonable size
+                    max_live_candles = context.regression_length + max(context.lookback_periods) + 100
+                    context.live_candles = context.live_candles[:max_live_candles]
+                    
+                    # Calculate regression with the updated data
                     await self._calculate_and_broadcast_regression(context_key)
                     
             except Exception as e:
-                logger.error(f"Critical data processing errors: Error processing tick for context {context_key}: {e}", exc_info=True) # ERROR: Critical data processing errors
-    
+                logger.error(f"Error processing tick for context {context_key}: {e}")
+                
     async def _start_calculation_task(self, context_key: str):
         """Start periodic regression calculation task."""
         async def calculation_loop():
