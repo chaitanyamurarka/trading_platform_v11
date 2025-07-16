@@ -39,6 +39,18 @@ class IndicatorService {
             if (!res.ok) throw new Error('Failed to fetch regression data');
 
             const results = await res.json();
+            
+            // Enhanced logging for debugging
+            console.log('📊 Regression analysis results:', results);
+            if (results.regression_results) {
+                results.regression_results.forEach(timeframe => {
+                    console.log(`📊 Timeframe ${timeframe.timeframe}:`);
+                    Object.entries(timeframe.results).forEach(([lookback, data]) => {
+                        console.log(`   Lookback ${lookback}: slope=${data.slope.toFixed(8)}, r_value=${data.r_value.toFixed(4)}`);
+                    });
+                });
+            }
+            
             this.store.set('regressionResults', results);
             
             // Auto-enable visualization if requested

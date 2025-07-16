@@ -1,45 +1,32 @@
-// frontend_soa/src/ui/components/regressionVisualizer.js - CORRECTED with your custom logic
+// frontend_soa/src/ui/components/regressionVisualizer.js - FIXED for live mode
 import { store } from '../../state/store.js';
 import { chartController } from '../../chart/chart.controller.js';
 import { showToast } from '../helpers.js';
 
 class RegressionVisualizer {
     constructor() {
-        this.regressionLines = new Map(); // Map of lookback -> line series
+        this.regressionLines = new Map();
         this.isVisualizationEnabled = false;
         this.currentTimeframe = null;
-        this.currentRegressionLength = 20; // Default, will be updated from results
+        this.currentRegressionLength = 20;
         this.colors = [
-            '#FF6B6B', // Red
-            '#4ECDC4', // Teal
-            '#45B7D1', // Blue
-            '#96CEB4', // Green
-            '#FFEAA7', // Yellow
-            '#DDA0DD', // Plum
-            '#98D8C8', // Mint
-            '#F7DC6F', // Light Yellow
-            '#BB8FCE', // Light Purple
-            '#85C1E9', // Light Blue
-            '#F8C471', // Orange
-            '#82E0AA', // Light Green
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
+            '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
         ];
-        this.colorIndex = 0;
+        this.lastKnownSlopes = new Map(); // Cache slopes for comparison
     }
 
     initialize() {
-        // Subscribe to regression results changes
         store.subscribe('regressionResults', (results) => {
             this.updateRegressionLines(results);
         });
 
-        // Subscribe to chart data changes to update line positions
         store.subscribe('chartData', (data) => {
             if (this.isVisualizationEnabled && data && data.length > 0) {
                 this.updateRegressionLines(store.get('regressionResults'));
             }
         });
 
-        // Subscribe to live regression updates
         store.subscribe('isLiveRegressionConnected', (isConnected) => {
             if (isConnected && this.isVisualizationEnabled) {
                 this.startLiveUpdates();
@@ -79,12 +66,11 @@ class RegressionVisualizer {
             return;
         }
 
-        // Get regression parameters from results
+        // Get regression parameters
         if (results.request_params && results.request_params.regression_length) {
             this.currentRegressionLength = results.request_params.regression_length;
         }
 
-        // Find the timeframe that matches current chart interval
         const currentInterval = store.get('selectedInterval');
         const matchingTimeframe = results.regression_results.find(
             result => result.timeframe === currentInterval
@@ -95,17 +81,32 @@ class RegressionVisualizer {
             return;
         }
 
-        console.log(`📊 Updating regression lines for ${currentInterval} with regression length ${this.currentRegressionLength}`);
+        const isLiveMode = store.get('isLiveMode');
+        console.log(`📊 Updating regression lines for ${currentInterval}, Live Mode: ${isLiveMode}, Regression Length: ${this.currentRegressionLength}`);
+
         this.clearAllLines();
-        this.colorIndex = 0;
 
         // Create lines for each lookback period
         Object.entries(matchingTimeframe.results).forEach(([lookback, regressionData]) => {
-            this.createRegressionLine(parseInt(lookback), regressionData, chartData);
+            const lookbackNum = parseInt(lookback);
+            
+            // Debug slope values
+            const currentSlope = regressionData.slope;
+            const previousSlope = this.lastKnownSlopes.get(lookbackNum);
+            
+            console.log(`📊 Lookback ${lookback}: slope=${currentSlope.toFixed(8)}, r_value=${regressionData.r_value.toFixed(4)}`);
+            
+            // Check for suspicious horizontal lines
+            if (Math.abs(currentSlope) < 1e-10 && previousSlope && Math.abs(previousSlope) > 1e-6) {
+                console.warn(`⚠️ Suspicious horizontal line detected for lookback ${lookback}. Previous slope: ${previousSlope.toFixed(8)}, Current slope: ${currentSlope.toFixed(8)}`);
+            }
+            
+            this.lastKnownSlopes.set(lookbackNum, currentSlope);
+            this.createRegressionLine(lookbackNum, regressionData, chartData, isLiveMode);
         });
     }
 
-    createRegressionLine(lookbackPeriod, regressionData, chartData) {
+    createRegressionLine(lookbackPeriod, regressionData, chartData, isLiveMode) {
         const chart = chartController.getChart();
         if (!chart) {
             console.error('Chart not available for regression line creation');
@@ -114,67 +115,81 @@ class RegressionVisualizer {
 
         const { slope, r_value } = regressionData;
         
-        // Calculate line points using YOUR CUSTOM LOGIC
-        const linePoints = this.calculateLinePointsCustomLogic(lookbackPeriod, slope, chartData);
+        // Enhanced debugging for live mode
+        if (isLiveMode) {
+            console.log(`🔴 LIVE MODE - Creating line for lookback ${lookbackPeriod}:`);
+            console.log(`   Slope: ${slope.toFixed(10)}`);
+            console.log(`   R-value: ${r_value.toFixed(6)}`);
+            console.log(`   Chart data length: ${chartData.length}`);
+            console.log(`   First candle time: ${chartData[0]?.time}, price: ${chartData[0]?.close}`);
+            console.log(`   Last candle time: ${chartData[chartData.length-1]?.time}, price: ${chartData[chartData.length-1]?.close}`);
+        }
+
+        // Calculate line points with enhanced error checking
+        const linePoints = this.calculateLinePointsWithValidation(lookbackPeriod, slope, chartData, isLiveMode);
+        
         if (linePoints.length === 0) {
             console.warn(`No line points calculated for lookback ${lookbackPeriod}`);
             return;
         }
 
-        // Get color for this lookback period
+        // Additional validation for horizontal lines
+        if (this.isLineHorizontal(linePoints)) {
+            console.warn(`⚠️ Horizontal line detected for lookback ${lookbackPeriod}. Slope: ${slope.toFixed(10)}`);
+            // Don't return - still show the line but with warning
+        }
+
         const color = this.getColorForLookback(lookbackPeriod);
         
-        // Create line series
         const lineSeries = chart.addLineSeries({
             color: color,
             lineWidth: 2,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
-            title: `L${lookbackPeriod} (R²=${(r_value * r_value).toFixed(3)})`
+            title: `L${lookbackPeriod} (R²=${(r_value * r_value).toFixed(3)}, S=${slope.toFixed(6)})`
         });
 
-        // Set line data
         lineSeries.setData(linePoints);
 
-        // Store reference
         this.regressionLines.set(lookbackPeriod, {
             series: lineSeries,
             color: color,
             slope: slope,
-            r_value: r_value
+            r_value: r_value,
+            linePoints: linePoints // Store for debugging
         });
 
-        console.log(`📈 Created regression line for lookback ${lookbackPeriod}, slope: ${slope.toFixed(6)}, R²: ${(r_value * r_value).toFixed(3)}`);
+        console.log(`📈 Created regression line for lookback ${lookbackPeriod}, slope: ${slope.toFixed(8)}, points: ${linePoints.length}`);
     }
 
-    calculateLinePointsCustomLogic(lookbackPeriod, slope, chartData) {
+    calculateLinePointsWithValidation(lookbackPeriod, slope, chartData, isLiveMode) {
         try {
-            // CORRECTED: Follow your exact microservice logic
-            // Data in chartData is in ascending order (oldest to newest)
-            // But your backend sorts it DESCENDING (newest first) before processing
-            
-            // Step 1: Sort data DESCENDING to match your backend logic
+            // Enhanced validation and logging
             const sortedCandles = [...chartData].sort((a, b) => b.time - a.time);
             const dataLength = sortedCandles.length;
             
-            console.log(`📊 Calculating line for lookback ${lookbackPeriod}, data length: ${dataLength}, regression length: ${this.currentRegressionLength}`);
-            
-            // Step 2: Apply your exact indexing logic
+            if (isLiveMode) {
+                console.log(`🔴 LIVE CALCULATION - Lookback ${lookbackPeriod}:`);
+                console.log(`   Data length: ${dataLength}`);
+                console.log(`   Regression length: ${this.currentRegressionLength}`);
+                console.log(`   Slope from backend: ${slope.toFixed(10)}`);
+            }
+
+            // Validation checks
             if (lookbackPeriod >= dataLength) {
                 console.warn(`Lookback ${lookbackPeriod} exceeds data length ${dataLength}`);
                 return [];
             }
 
-            const startIndex = lookbackPeriod; // Start FROM lookback periods ago
-            const endIndex = startIndex + this.currentRegressionLength; // Go FORWARD regression_length bars
+            const startIndex = lookbackPeriod;
+            const endIndex = startIndex + this.currentRegressionLength;
 
             if (endIndex > dataLength) {
                 console.warn(`End index ${endIndex} exceeds data length ${dataLength} for lookback ${lookbackPeriod}`);
                 return [];
             }
 
-            // Step 3: Get the exact candles used for regression (same as your backend)
             const candlesForRegression = sortedCandles.slice(startIndex, endIndex);
             
             if (candlesForRegression.length < 2) {
@@ -182,28 +197,43 @@ class RegressionVisualizer {
                 return [];
             }
 
-            // Step 4: Your backend reverses the data for regression calculation
-            // So the "first" candle in regression is actually the oldest in the window
-            const oldestCandleInWindow = candlesForRegression[candlesForRegression.length - 1];
-            const newestCandleInWindow = candlesForRegression[0];
+            // Enhanced debugging for live mode
+            if (isLiveMode) {
+                console.log(`🔴 LIVE WINDOW - Lookback ${lookbackPeriod}:`);
+                console.log(`   Start index: ${startIndex}, End index: ${endIndex}`);
+                console.log(`   Window size: ${candlesForRegression.length}`);
+                console.log(`   Newest in window: time=${candlesForRegression[0].time}, price=${candlesForRegression[0].close}`);
+                console.log(`   Oldest in window: time=${candlesForRegression[candlesForRegression.length-1].time}, price=${candlesForRegression[candlesForRegression.length-1].close}`);
+            }
 
-            console.log(`📊 Regression window: ${oldestCandleInWindow.time} to ${newestCandleInWindow.time}`);
-
-            // Step 5: Calculate regression line using the slope
-            // We need to reconstruct the line using y = mx + b
-            // The slope is calculated from (time, close) pairs
+            // Check for timestamp issues
+            const timeRange = candlesForRegression[0].time - candlesForRegression[candlesForRegression.length-1].time;
+            const priceRange = Math.max(...candlesForRegression.map(c => c.close)) - Math.min(...candlesForRegression.map(c => c.close));
             
-            // Get the middle point of the regression window to calculate intercept
+            if (isLiveMode) {
+                console.log(`🔴 LIVE RANGES - Lookback ${lookbackPeriod}:`);
+                console.log(`   Time range: ${timeRange} seconds`);
+                console.log(`   Price range: ${priceRange.toFixed(4)}`);
+                console.log(`   Expected slope magnitude: ${Math.abs(slope).toFixed(10)}`);
+            }
+
+            // Calculate intercept using middle point
             const middleIndex = Math.floor(candlesForRegression.length / 2);
             const middleCandle = candlesForRegression[middleIndex];
             
-            // Calculate intercept: b = y - mx
+            // CRITICAL: Check if slope is being applied correctly
             const intercept = middleCandle.close - (slope * middleCandle.time);
+            
+            if (isLiveMode) {
+                console.log(`🔴 LIVE INTERCEPT - Lookback ${lookbackPeriod}:`);
+                console.log(`   Middle candle: time=${middleCandle.time}, price=${middleCandle.close}`);
+                console.log(`   Calculated intercept: ${intercept.toFixed(6)}`);
+                console.log(`   Slope * time: ${(slope * middleCandle.time).toFixed(6)}`);
+            }
 
-            // Step 6: Generate line points for the EXACT regression window
+            // Generate line points
             const linePoints = [];
             
-            // Generate points for the exact window used in regression
             for (let i = 0; i < candlesForRegression.length; i++) {
                 const candle = candlesForRegression[i];
                 const regressionValue = slope * candle.time + intercept;
@@ -214,10 +244,28 @@ class RegressionVisualizer {
                 });
             }
 
-            // Sort line points by time (ascending) for the chart
+            // Sort by time ascending for the chart
             linePoints.sort((a, b) => a.time - b.time);
 
-            console.log(`📈 Generated ${linePoints.length} line points for lookback ${lookbackPeriod}`);
+            // Enhanced validation of line points
+            if (isLiveMode && linePoints.length > 1) {
+                const firstPoint = linePoints[0];
+                const lastPoint = linePoints[linePoints.length - 1];
+                const actualSlope = (lastPoint.value - firstPoint.value) / (lastPoint.time - firstPoint.time);
+                
+                console.log(`🔴 LIVE VALIDATION - Lookback ${lookbackPeriod}:`);
+                console.log(`   First point: time=${firstPoint.time}, value=${firstPoint.value.toFixed(6)}`);
+                console.log(`   Last point: time=${lastPoint.time}, value=${lastPoint.value.toFixed(6)}`);
+                console.log(`   Calculated slope: ${actualSlope.toFixed(10)}`);
+                console.log(`   Expected slope: ${slope.toFixed(10)}`);
+                console.log(`   Slope difference: ${Math.abs(actualSlope - slope).toFixed(12)}`);
+                
+                // Check for slope mismatch
+                if (Math.abs(actualSlope - slope) > 1e-8) {
+                    console.error(`❌ SLOPE MISMATCH for lookback ${lookbackPeriod}! Expected: ${slope.toFixed(10)}, Got: ${actualSlope.toFixed(10)}`);
+                }
+            }
+
             return linePoints;
 
         } catch (error) {
@@ -226,33 +274,30 @@ class RegressionVisualizer {
         }
     }
 
+    isLineHorizontal(linePoints) {
+        if (linePoints.length < 2) return false;
+        
+        const firstValue = linePoints[0].value;
+        const lastValue = linePoints[linePoints.length - 1].value;
+        const valueDifference = Math.abs(lastValue - firstValue);
+        
+        // Consider horizontal if value difference is very small
+        return valueDifference < 1e-8;
+    }
+
     getColorForLookback(lookbackPeriod) {
-        // Assign consistent colors to lookback periods
         const commonColors = {
-            0: '#FF6B6B',   // Red for immediate (0 lookback)
-            1: '#4ECDC4',   // Teal for 1 period
-            2: '#45B7D1',   // Blue for 2 periods
-            3: '#96CEB4',   // Green for 3 periods
-            5: '#FFEAA7',   // Yellow for 5 periods
-            10: '#DDA0DD',  // Plum for 10 periods
-            20: '#98D8C8',  // Mint for 20 periods
-            30: '#F7DC6F',  // Light Yellow for 30 periods
+            0: '#FF6B6B', 1: '#4ECDC4', 2: '#45B7D1', 3: '#96CEB4', 
+            5: '#FFEAA7', 10: '#DDA0DD', 20: '#98D8C8', 30: '#F7DC6F'
         };
 
-        if (commonColors[lookbackPeriod]) {
-            return commonColors[lookbackPeriod];
-        }
-
-        // For other lookback periods, use cycling colors
-        const colorIndex = lookbackPeriod % this.colors.length;
-        return this.colors[colorIndex];
+        return commonColors[lookbackPeriod] || this.colors[lookbackPeriod % this.colors.length];
     }
 
     clearAllLines() {
         const chart = chartController.getChart();
         if (!chart) return;
 
-        // Remove all regression line series
         this.regressionLines.forEach(({ series }) => {
             try {
                 chart.removeSeries(series);
@@ -266,12 +311,9 @@ class RegressionVisualizer {
     }
 
     startLiveUpdates() {
-        // This will be called when live regression updates are received
-        // The lines will be updated automatically through the store subscription
         console.log('📡 Started live regression line updates');
     }
 
-    // Public method to toggle visualization for current timeframe
     toggleVisualization() {
         const currentInterval = store.get('selectedInterval');
         
@@ -284,7 +326,6 @@ class RegressionVisualizer {
         }
     }
 
-    // Public method to get current visualization state
     getVisualizationState() {
         return {
             enabled: this.isVisualizationEnabled,
@@ -300,11 +341,9 @@ class RegressionVisualizer {
         if (!results || !results.regression_results) {
             return [];
         }
-        
         return results.regression_results.map(result => result.timeframe);
     }
 
-    // Method to update visualization for a specific timeframe
     setVisualizationTimeframe(timeframe) {
         if (this.isVisualizationEnabled) {
             this.currentTimeframe = timeframe;
@@ -312,7 +351,6 @@ class RegressionVisualizer {
         }
     }
 
-    // Method to get line info for display
     getLineInfo() {
         const lineInfo = [];
         this.regressionLines.forEach((lineData, lookback) => {
@@ -324,41 +362,54 @@ class RegressionVisualizer {
                 r_squared: lineData.r_value * lineData.r_value
             });
         });
-        
         return lineInfo.sort((a, b) => a.lookback - b.lookback);
     }
 
-    // Method to update regression length when new results arrive
     updateRegressionLength(newLength) {
         this.currentRegressionLength = newLength;
         console.log(`📊 Updated regression length to: ${newLength}`);
         
-        // Re-calculate lines if visualization is enabled
         if (this.isVisualizationEnabled) {
             this.updateRegressionLines(store.get('regressionResults'));
         }
     }
 
-    // Debug method to verify logic matches backend
-    debugRegressionWindow(lookbackPeriod) {
+    // Debug method to investigate live mode issues
+    debugLiveMode() {
+        const isLiveMode = store.get('isLiveMode');
         const chartData = store.get('chartData');
-        if (!chartData || chartData.length === 0) return null;
-
-        const sortedCandles = [...chartData].sort((a, b) => b.time - a.time);
-        const startIndex = lookbackPeriod;
-        const endIndex = startIndex + this.currentRegressionLength;
+        const results = store.get('regressionResults');
         
-        const candlesForRegression = sortedCandles.slice(startIndex, endIndex);
+        console.log('🔍 DEBUG LIVE MODE:');
+        console.log(`   Live mode: ${isLiveMode}`);
+        console.log(`   Chart data length: ${chartData?.length || 0}`);
+        console.log(`   Has regression results: ${!!results}`);
+        console.log(`   Visualization enabled: ${this.isVisualizationEnabled}`);
+        console.log(`   Active lines: ${this.regressionLines.size}`);
         
-        return {
-            totalCandles: sortedCandles.length,
-            startIndex: startIndex,
-            endIndex: endIndex,
-            regressionWindowSize: candlesForRegression.length,
-            oldestInWindow: candlesForRegression[candlesForRegression.length - 1],
-            newestInWindow: candlesForRegression[0],
-            regressionLength: this.currentRegressionLength
-        };
+        if (chartData && chartData.length > 0) {
+            console.log(`   Latest candle: time=${chartData[chartData.length-1].time}, price=${chartData[chartData.length-1].close}`);
+        }
+        
+        if (results && results.regression_results) {
+            const currentInterval = store.get('selectedInterval');
+            const matchingTimeframe = results.regression_results.find(r => r.timeframe === currentInterval);
+            if (matchingTimeframe) {
+                console.log(`   Slopes for ${currentInterval}:`, Object.entries(matchingTimeframe.results).map(([k,v]) => `${k}:${v.slope.toFixed(8)}`));
+            }
+        }
+        
+        // Check individual line data
+        this.regressionLines.forEach((lineData, lookback) => {
+            console.log(`   Line ${lookback}: slope=${lineData.slope.toFixed(8)}, points=${lineData.linePoints?.length || 0}`);
+            if (lineData.linePoints && lineData.linePoints.length > 1) {
+                const first = lineData.linePoints[0];
+                const last = lineData.linePoints[lineData.linePoints.length - 1];
+                console.log(`     First: time=${first.time}, value=${first.value.toFixed(6)}`);
+                console.log(`     Last: time=${last.time}, value=${last.value.toFixed(6)}`);
+                console.log(`     Actual slope: ${((last.value - first.value) / (last.time - first.time)).toFixed(10)}`);
+            }
+        });
     }
 }
 
