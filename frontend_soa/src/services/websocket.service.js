@@ -1,4 +1,4 @@
-// frontend_soa/src/services/websocket.service.js - Updated to match frontend_services logic
+// frontend_soa/src/services/websocket.service.js - FIXED VERSION
 import { store } from '../state/store.js';
 import { chartController } from '../chart/chart.controller.js';
 import { showToast } from '../ui/helpers.js';
@@ -17,23 +17,28 @@ class WebSocketService {
         
         const { symbol, interval, timezone, candleType } = params;
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        
+        // FIX: Construct proper WebSocket URL for the gateway
         const endpoint = candleType === 'heikin_ashi' ? 'ws-ha/live' : 'ws/live';
-        const wsURL = `${wsProtocol}//${window.location.host}/${endpoint}/${encodeURIComponent(symbol)}/${interval}/${encodeURIComponent(timezone)}`;
+        const wsURL = `${wsProtocol}//${window.location.hostname}:8000/${endpoint}/${encodeURIComponent(symbol)}/${interval}/${encodeURIComponent(timezone)}`;
 
+        console.log(`🔌 Connecting to WebSocket: ${wsURL}`);
         showToast(`Connecting to live feed for ${symbol}...`, 'info');
+        
         this.socket = new WebSocket(wsURL);
         this.setupEventHandlers();
     }
 
     setupEventHandlers() {
         this.socket.onopen = () => {
+            console.log('✅ WebSocket connected successfully');
             showToast(`Live feed connected for ${this.connectionParams.symbol}!`, 'success');
         };
 
         this.socket.onmessage = (event) => {
             // Buffer messages if loading historical data
             if (this.isLoadingHistoricalData) {
-                console.log("Buffering WebSocket message.");
+                console.log("📦 Buffering WebSocket message during historical data load.");
                 this.websocketMessageBuffer.push({ 
                     type: this.connectionParams.candleType, 
                     data: event.data 
@@ -45,90 +50,121 @@ class WebSocketService {
             this.handleMessage(event.data);
         };
 
-        this.socket.onclose = () => {
-            console.log('Live data WebSocket closed.');
+        this.socket.onclose = (event) => {
+            console.log('🔌 WebSocket connection closed:', event.code, event.reason);
+            if (event.code !== 1000) { // 1000 = normal closure
+                showToast('Live connection closed unexpectedly', 'warning');
+            }
         };
 
         this.socket.onerror = (error) => {
-            console.error('Live data WebSocket error:', error);
-            showToast('Live connection error.', 'error');
+            console.error('❌ WebSocket error:', error);
+            showToast('Live connection error. Check console for details.', 'error');
         };
     }
 
     handleMessage(rawData) {
-        const data = JSON.parse(rawData);
-        
-        // Handle backfill data (array)
-        if (Array.isArray(data)) {
-            if (data.length === 0) return;
-            console.log(`Received backfill data with ${data.length} bars.`);
+        try {
+            const data = JSON.parse(rawData);
             
-            // Get current data arrays based on candle type
-            const targetOhlcArray = store.get('chartData') || [];
-            const targetVolumeArray = store.get('volumeData') || [];
-            
-            const formattedBackfillBars = data.map(c => ({ 
-                time: c.unix_timestamp, 
-                open: c.open, 
-                high: c.high, 
-                low: c.low, 
-                close: c.close 
-            }));
-            
-            const formattedVolumeBars = data.map(c => ({ 
-                time: c.unix_timestamp, 
-                value: c.volume, 
-                color: c.close >= c.open ? '#10b98180' : '#ef444480' 
-            }));
-            
-            const lastHistoricalTime = targetOhlcArray.length > 0 ? targetOhlcArray[targetOhlcArray.length - 1].time : 0;
-            
-            const newOhlcBars = formattedBackfillBars.filter(d => d.time > lastHistoricalTime);
-            const newVolumeBars = formattedVolumeBars.filter(d => d.time > lastHistoricalTime);
-
-            if (newOhlcBars.length > 0) {
-                // Update store with new data
-                store.set('chartData', [...targetOhlcArray, ...newOhlcBars]);
-                store.set('volumeData', [...targetVolumeArray, ...newVolumeBars]);
+            // Handle backfill data (array)
+            if (Array.isArray(data)) {
+                this.handleBackfillData(data);
+            } else {
+                // Handle live updates (object)
+                this.handleLiveUpdate(data);
             }
-        } else {
-            // Handle live updates
-            this.handleLiveUpdate(data);
+        } catch (error) {
+            console.error('❌ Error parsing WebSocket message:', error);
+        }
+    }
+
+    handleBackfillData(data) {
+        if (data.length === 0) {
+            console.log('📭 Received empty backfill data');
+            return;
+        }
+        
+        console.log(`📊 Received backfill data with ${data.length} bars.`);
+        
+        // Get current data arrays
+        const targetOhlcArray = store.get('chartData') || [];
+        const targetVolumeArray = store.get('volumeData') || [];
+        
+        const formattedBackfillBars = data.map(c => ({ 
+            time: c.unix_timestamp, 
+            open: c.open, 
+            high: c.high, 
+            low: c.low, 
+            close: c.close 
+        }));
+        
+        const formattedVolumeBars = data.map(c => ({ 
+            time: c.unix_timestamp, 
+            value: c.volume || 0, 
+            color: c.close >= c.open ? '#10b98180' : '#ef444480' 
+        }));
+        
+        // Only add bars that are newer than the last historical bar
+        const lastHistoricalTime = targetOhlcArray.length > 0 ? 
+            targetOhlcArray[targetOhlcArray.length - 1].time : 0;
+        
+        const newOhlcBars = formattedBackfillBars.filter(d => d.time > lastHistoricalTime);
+        const newVolumeBars = formattedVolumeBars.filter(d => d.time > lastHistoricalTime);
+
+        if (newOhlcBars.length > 0) {
+            console.log(`📈 Adding ${newOhlcBars.length} new bars from backfill`);
+            store.set('chartData', [...targetOhlcArray, ...newOhlcBars]);
+            store.set('volumeData', [...targetVolumeArray, ...newVolumeBars]);
         }
     }
 
     handleLiveUpdate(data) {
-        if (!data || !chartController.getMainSeries()) return;
+        if (!data || !chartController.getMainSeries()) {
+            console.warn('⚠️ Cannot handle live update: missing data or chart series');
+            return;
+        }
 
         const { completed_bar, current_bar } = data;
 
         // Update completed bar first
         if (completed_bar) {
+            console.log('📊 Updating completed bar:', completed_bar.unix_timestamp);
             chartController.updateBar(completed_bar);
         }
 
         // Update current bar
         if (current_bar) {
+            console.log('📊 Updating current bar:', current_bar.unix_timestamp);
             chartController.updateBar(current_bar);
         }
     }
 
     // Process buffered messages
     processMessageBuffer() {
-        console.log(`Processing ${this.websocketMessageBuffer.length} buffered WebSocket messages.`);
+        const bufferSize = this.websocketMessageBuffer.length;
+        console.log(`📦 Processing ${bufferSize} buffered WebSocket messages.`);
         
         this.websocketMessageBuffer.forEach(msg => {
-            const parsedData = JSON.parse(msg.data);
-            this.handleMessage(msg.data);
+            try {
+                this.handleMessage(msg.data);
+            } catch (error) {
+                console.error('❌ Error processing buffered message:', error);
+            }
         });
         
         // Clear the buffer
         this.websocketMessageBuffer = [];
+        
+        if (bufferSize > 0) {
+            console.log(`✅ Processed ${bufferSize} buffered messages`);
+        }
     }
 
     // Set loading state
     setLoadingState(isLoading) {
         this.isLoadingHistoricalData = isLoading;
+        console.log(`📊 Historical data loading state: ${isLoading}`);
         
         // Process buffer when loading completes
         if (!isLoading) {
@@ -138,15 +174,38 @@ class WebSocketService {
 
     disconnect() {
         if (this.socket) {
+            console.log('🔌 Disconnecting WebSocket...');
             this.socket.onclose = null; // Prevent automatic reconnection
-            this.socket.close();
+            this.socket.close(1000, 'User disconnected'); // 1000 = normal closure
             this.socket = null;
-            console.log('WebSocket disconnected.');
+            console.log('✅ WebSocket disconnected');
         }
     }
 
     isConnected() {
         return this.socket && this.socket.readyState === WebSocket.OPEN;
+    }
+
+    getConnectionState() {
+        if (!this.socket) return 'DISCONNECTED';
+        
+        switch (this.socket.readyState) {
+            case WebSocket.CONNECTING: return 'CONNECTING';
+            case WebSocket.OPEN: return 'CONNECTED';
+            case WebSocket.CLOSING: return 'CLOSING';
+            case WebSocket.CLOSED: return 'DISCONNECTED';
+            default: return 'UNKNOWN';
+        }
+    }
+
+    // Debug method to check connection status
+    getDebugInfo() {
+        return {
+            connectionState: this.getConnectionState(),
+            isLoading: this.isLoadingHistoricalData,
+            bufferSize: this.websocketMessageBuffer.length,
+            connectionParams: this.connectionParams
+        };
     }
 }
 

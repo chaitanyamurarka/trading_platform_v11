@@ -1,4 +1,4 @@
-// frontend_soa/src/services/data.service.js - Updated to match frontend_services logic
+// frontend_soa/src/services/data.service.js - FIXED WebSocket timing
 import { store } from '../state/store.js';
 import { showToast } from '../ui/helpers.js';
 import { websocketService } from './websocket.service.js';
@@ -31,27 +31,37 @@ class DataService {
 
     handleLiveMode(isLive) {
         if (isLive) {
+            console.log('🔴 Live mode enabled - setting up connection');
             // Set automatic date/time when enabling live mode
             setAutomaticDateTime();
             
+            // Load initial data first, then connect WebSocket
             this.loadInitialChartData().then(() => {
-                const params = {
-                    symbol: this.store.get('selectedSymbol'),
-                    interval: this.store.get('selectedInterval'),
-                    timezone: this.store.get('selectedTimezone'),
-                    candleType: this.store.get('selectedCandleType'),
-                };
-                websocketService.connect(params);
-                
-                // Trigger auto-scaling when live mode is enabled
-                import('../ui/components/drawingToolbar.js').then(({ drawingToolbar }) => {
-                    drawingToolbar.triggerAutoScaling();
-                });
+                // Only connect WebSocket after data is loaded
+                this.connectWebSocket();
             });
         } else {
+            console.log('🔴 Live mode disabled - disconnecting');
             websocketService.disconnect();
             showToast('Live mode disabled', 'info');
         }
+    }
+
+    connectWebSocket() {
+        const params = {
+            symbol: this.store.get('selectedSymbol'),
+            interval: this.store.get('selectedInterval'),
+            timezone: this.store.get('selectedTimezone'),
+            candleType: this.store.get('selectedCandleType'),
+        };
+        
+        console.log('🔌 Connecting WebSocket with params:', params);
+        websocketService.connect(params);
+        
+        // Trigger auto-scaling when live mode is enabled
+        import('../ui/components/drawingToolbar.js').then(({ drawingToolbar }) => {
+            drawingToolbar.triggerAutoScaling();
+        });
     }
 
     async loadInitialChartData() {
@@ -67,7 +77,12 @@ class DataService {
             return;
         }
 
-        websocketService.disconnect();
+        // FIXED: Only disconnect if we're reloading data due to parameter changes
+        // Don't disconnect if we're just setting up live mode
+        const isLiveMode = this.store.get('isLiveMode');
+        if (!isLiveMode) {
+            websocketService.disconnect();
+        }
 
         this.isFetching = true;
         this.store.set('isLoading', true);
@@ -130,20 +145,13 @@ class DataService {
             // Process any buffered websocket messages
             websocketService.setLoadingState(false);
 
-            // Apply autoscaling after loading data (like frontend_services)
+            // Apply autoscaling after loading data
             import('../ui/components/drawingToolbar.js').then(({ drawingToolbar }) => {
                 drawingToolbar.triggerAutoScaling();
             });
 
-            if (this.store.get('isLiveMode')) {
-                const params = {
-                    symbol: this.store.get('selectedSymbol'),
-                    interval: this.store.get('selectedInterval'),
-                    timezone: this.store.get('selectedTimezone'),
-                    candleType: this.store.get('selectedCandleType'),
-                };
-                websocketService.connect(params);
-            }
+            // FIXED: Don't automatically reconnect WebSocket here
+            // Let handleLiveMode manage the connection lifecycle
         }
     }
 
