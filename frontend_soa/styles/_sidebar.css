@@ -41,9 +41,6 @@
     #sidebar-overlay {
         display: none !important; /* Overlay is not needed on larger screens */
     }
-    #moved-controls {
-        display: none !important;
-    }
 }
 
 #menu-toggle {
