@@ -92,12 +92,7 @@ class DataService {
             return;
         }
 
-        // FIXED: Only disconnect if we're reloading data due to parameter changes
-        // Don't disconnect if we're just setting up live mode
-        const isLiveMode = this.store.get('isLiveMode');
-        if (!isLiveMode) {
-            websocketService.disconnect();
-        }
+        websocketService.disconnect();
 
         this.isFetching = true;
         this.store.set('isLoading', true);
@@ -157,16 +152,17 @@ class DataService {
             this.isFetching = false;
             this.store.set('isLoading', false);
             
-            // Process any buffered websocket messages
             websocketService.setLoadingState(false);
+
+            // Re-connect if in live mode
+            if (this.store.get('isLiveMode')) {
+                this.connectWebSocket();
+            }
 
             // Apply autoscaling after loading data
             import('../ui/components/drawingToolbar.js').then(({ drawingToolbar }) => {
                 drawingToolbar.triggerAutoScaling();
             });
-
-            // FIXED: Don't automatically reconnect WebSocket here
-            // Let handleLiveMode manage the connection lifecycle
         }
     }
 

@@ -9,20 +9,27 @@ class WebSocketService {
         this.connectionParams = null;
         this.isLoadingHistoricalData = false;
         this.websocketMessageBuffer = [];
+        this.connectionAttempt = 0;
     }
 
     connect(params) {
-        this.disconnect(); // Ensure old connection is closed
+        // Prevent multiple connection attempts
+        if (this.socket && this.socket.readyState === WebSocket.CONNECTING) {
+            console.warn("⚠️ WebSocket connection attempt already in progress.");
+            return;
+        }
+
+        this.disconnect(); // Ensure any old connection is closed
         this.connectionParams = params;
+        this.connectionAttempt++;
         
         const { symbol, interval, timezone, candleType } = params;
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         
-        // FIX: Construct proper WebSocket URL for the gateway
         const endpoint = candleType === 'heikin_ashi' ? 'ws-ha/live' : 'ws/live';
         const wsURL = `${wsProtocol}//${window.location.hostname}:8000/${endpoint}/${encodeURIComponent(symbol)}/${interval}/${encodeURIComponent(timezone)}`;
 
-        console.log(`🔌 Connecting to WebSocket: ${wsURL}`);
+        console.log(`🔌 [Attempt #${this.connectionAttempt}] Connecting to WebSocket: ${wsURL}`);
         showToast(`Connecting to live feed for ${symbol}...`, 'info');
         
         this.socket = new WebSocket(wsURL);
