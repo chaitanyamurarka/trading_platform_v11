@@ -1,4 +1,4 @@
-// frontend_soa/main.js - Updated to remove debug files and match frontend_services
+// frontend_soa/main.js - Updated with regression visualization
 import { store } from './src/state/store.js';
 import { sessionService } from './src/services/session.service.js';
 import { dataService } from './src/services/data.service.js';
@@ -7,11 +7,12 @@ import { chartController } from './src/chart/chart.controller.js';
 import { initializeUiListeners } from './src/ui/listeners.js';
 import { 
     populateSymbolSelect,
-    populateExchangeSelect } from './src/ui/helpers.js'; // Import our new function
+    populateExchangeSelect } from './src/ui/helpers.js';
 import { 
     getDomElements, 
     updateElementsCache } from './src/ui/dom.js';
 import { regressionTable } from './src/ui/components/regressionTable.js';
+import { regressionVisualizer } from './src/ui/components/regressionVisualizer.js';
 import { drawingToolbar } from './src/ui/components/drawingToolbar.js';
 import { rangeControls } from './src/ui/rangeControls.js';
 
@@ -87,8 +88,11 @@ class App {
         // Initialize drawing toolbar
         drawingToolbar.initialize();
         
-        // Initialize regression table
+        // Initialize regression table (includes visualizer)
         regressionTable.initialize();
+        
+        // Initialize regression visualizer
+        regressionVisualizer.initialize();
         
         // Replace indicator modal HTML with enhanced version
         this.replaceIndicatorModal();
@@ -119,10 +123,10 @@ class App {
         const existingModal = document.getElementById('indicator_modal');
         if (!existingModal) return;
 
-        // Enhanced modal HTML with range controls (same as before)
+        // Enhanced modal HTML with range controls and visualization options
         const enhancedModalHTML = `
             <dialog id="indicator_modal" class="modal">
-                <div class="modal-box w-11/12 max-w-2xl">
+                <div class="modal-box w-11/12 max-w-4xl">
                     <h3 class="font-bold text-lg">Indicator Settings</h3>
                     <div class="py-4 space-y-4">
                         <div class="form-control">
@@ -159,7 +163,7 @@ class App {
                             
                             <div class="form-control">
                                 <label class="label"><span class="label-text">Regression Length</span></label>
-                                <input type="number" id="indicator-regression-length" value="10" min="2" max="1000" class="input input-bordered input-sm">
+                                <input type="number" id="indicator-regression-length" value="20" min="2" max="1000" class="input input-bordered input-sm">
                                 <label class="label">
                                     <span class="label-text-alt">Number of candles to use for regression calculation (2-1000)</span>
                                 </label>
@@ -205,7 +209,7 @@ class App {
                                         <div class="form-control">
                                             <label class="label">
                                                 <span class="label-text text-sm">Max Lookback</span>
-                                                <span class="label-text-alt" id="max-lookback-display">5</span>
+                                                <span class="label-text-alt" id="max-lookback-display">10</span>
                                             </label>
                                             <div class="flex items-center gap-2">
                                                 <input 
@@ -213,7 +217,7 @@ class App {
                                                     id="max-lookback-slider" 
                                                     min="1" 
                                                     max="50" 
-                                                    value="5" 
+                                                    value="10" 
                                                     class="range range-accent range-xs flex-1"
                                                 >
                                                 <input 
@@ -221,7 +225,7 @@ class App {
                                                     id="max-lookback-input" 
                                                     min="1" 
                                                     max="50" 
-                                                    value="5" 
+                                                    value="10" 
                                                     class="input input-bordered input-xs w-14 text-center"
                                                 >
                                             </div>
@@ -258,10 +262,10 @@ class App {
                                     <div class="mt-4">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-sm font-medium">Generated Periods:</span>
-                                            <div class="badge badge-primary badge-sm" id="period-count">6 periods</div>
+                                            <div class="badge badge-primary badge-sm" id="period-count">11 periods</div>
                                         </div>
                                         <div class="bg-base-100 rounded p-2 text-xs font-mono border" id="lookback-preview">
-                                            [0, 1, 2, 3, 4, 5]
+                                            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
                                         </div>
                                     </div>
                                 </div>
@@ -270,13 +274,39 @@ class App {
                             <div class="form-control">
                                 <label class="label"><span class="label-text">Timeframes</span></label>
                                 <div id="indicator-timeframes" class="grid grid-cols-3 gap-2">
-                                    <label class="flex items-center gap-2"><input type="checkbox" value="10s" class="checkbox checkbox-sm" checked> 10s</label>
-                                    <label class="flex items-center gap-2"><input type="checkbox" value="30s" class="checkbox checkbox-sm" checked> 30s</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" value="10s" class="checkbox checkbox-sm"> 10s</label>
+                                    <label class="flex items-center gap-2"><input type="checkbox" value="30s" class="checkbox checkbox-sm"> 30s</label>
                                     <label class="flex items-center gap-2"><input type="checkbox" value="45s" class="checkbox checkbox-sm"> 45s</label>
                                     <label class="flex items-center gap-2"><input type="checkbox" value="1m" class="checkbox checkbox-sm" checked> 1m</label>
                                     <label class="flex items-center gap-2"><input type="checkbox" value="5m" class="checkbox checkbox-sm" checked> 5m</label>
                                     <label class="flex items-center gap-2"><input type="checkbox" value="15m" class="checkbox checkbox-sm"> 15m</label>
                                     <label class="flex items-center gap-2"><input type="checkbox" value="1h" class="checkbox checkbox-sm"> 1h</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Visualization Options -->
+                            <div class="card bg-primary/5 border border-primary/20 shadow-sm">
+                                <div class="card-body p-4">
+                                    <h4 class="font-semibold text-base mb-3 flex items-center gap-2">
+                                        <i class="fas fa-chart-line text-primary"></i>
+                                        Visualization Options
+                                        <div class="badge badge-primary badge-xs">New</div>
+                                    </h4>
+                                    
+                                    <div class="form-control">
+                                        <label class="cursor-pointer label">
+                                            <span class="label-text">Auto-enable chart visualization</span>
+                                            <input type="checkbox" id="auto-enable-visualization" class="toggle toggle-sm toggle-primary" checked>
+                                        </label>
+                                        <label class="label">
+                                            <span class="label-text-alt">Automatically show regression lines on chart for matching timeframes</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="alert alert-info text-xs mt-3">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span>Regression lines will be drawn on the chart for the current timeframe with different colors for each lookback period.</span>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -287,7 +317,7 @@ class App {
                                     <input type="checkbox" id="enable-live-regression" class="toggle toggle-sm toggle-success" checked>
                                 </label>
                                 <label class="label">
-                                    <span class="label-text-alt">Automatically update regression values in real-time (requires Live Mode)</span>
+                                    <span class="label-text-alt">Automatically update regression values and lines in real-time (requires Live Mode)</span>
                                 </label>
                             </div>
                             
@@ -299,7 +329,7 @@ class App {
                     </div>
                     
                     <div class="modal-action">
-                        <button id="indicator-apply-btn" class="btn btn-primary">Apply</button>
+                        <button id="indicator-apply-btn" class="btn btn-primary">Apply Analysis</button>
                         <form method="dialog"><button class="btn">Close</button></form>
                     </div>
                 </div>
@@ -310,7 +340,7 @@ class App {
         // Replace the existing modal
         existingModal.outerHTML = enhancedModalHTML;
         
-        console.log('Indicator modal enhanced with range controls');
+        console.log('Indicator modal enhanced with range controls and visualization options');
     }
 }
 

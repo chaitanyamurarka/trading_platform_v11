@@ -19,7 +19,11 @@ class DataService {
         
         // Subscribe to changes that should trigger data reload
         this.store.subscribe('selectedSymbol', () => this.loadInitialChartData());
-        this.store.subscribe('selectedInterval', () => this.loadInitialChartData());
+        this.store.subscribe('selectedInterval', (newInterval) => {
+            this.loadInitialChartData();
+            // Update visualization timeframe if regression is active
+            this.updateRegressionVisualization(newInterval);
+        });
         this.store.subscribe('selectedTimezone', () => this.loadInitialChartData());
         this.store.subscribe('selectedCandleType', () => this.loadInitialChartData());
         this.store.subscribe('startTime', () => this.loadInitialChartData());
@@ -27,6 +31,17 @@ class DataService {
         this.store.subscribe('isLiveMode', (isLive) => this.handleLiveMode(isLive));
         
         console.log('DataService Initialized');
+    }
+
+    updateRegressionVisualization(newInterval) {
+        // Update regression visualization when timeframe changes
+        const isIndicatorActive = this.store.get('isIndicatorActive');
+        if (isIndicatorActive) {
+            // Dynamic import to avoid circular dependency
+            import('./indicator.service.js').then(({ indicatorService }) => {
+                indicatorService.updateVisualizationTimeframe(newInterval);
+            });
+        }
     }
 
     handleLiveMode(isLive) {

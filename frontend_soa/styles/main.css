@@ -1,201 +1,319 @@
-/* Fixed settings modal styles for frontend_soa/styles/main.css */
-@import url('./_sidebar.css');
+/* Add to frontend_soa/styles/main.css - Regression visualization styles */
 
-/* Modal backdrop with proper theming */
-.modal {
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(1px);
+/* Regression Table Enhancements */
+.regression-legend {
+    border: 1px solid hsl(var(--bc) / 0.1);
+    backdrop-filter: blur(4px);
 }
 
-/* Modal box with theme-aware background */
-.modal-box {
-    background-color: hsl(var(--b1));
+.regression-legend h4 {
     color: hsl(var(--bc));
-    border: 1px solid hsl(var(--b3));
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    margin-bottom: 0.5rem;
 }
 
-/* Ensure the modal-box has proper background in both themes */
-[data-theme="dark"] .modal-box {
-    background-color: hsl(215 28% 17%); /* Matches dark theme background */
-}
-
-[data-theme="light"] .modal-box {
-    background-color: hsl(0 0% 100%); /* White background for light theme */
-}
-
-/* Tab container with theme background */
-.modal-box .tabs {
-    background-color: hsl(var(--b2));
+.regression-legend .grid > div {
     padding: 0.25rem;
+    border-radius: 0.375rem;
+    background-color: hsl(var(--b1) / 0.5);
+}
+
+/* Table row highlighting for current timeframe */
+#regression-table tr.bg-primary {
+    background-color: hsl(var(--p) / 0.1) !important;
+}
+
+#regression-table tr.bg-primary td {
+    background-color: hsl(var(--p) / 0.1) !important;
+}
+
+/* Slope cells with color indicators */
+#regression-table td .flex.items-center {
+    gap: 0.25rem;
+}
+
+#regression-table td .w-2.h-2 {
+    flex-shrink: 0;
+    border: 1px solid hsl(var(--bc) / 0.2);
+}
+
+/* Header color indicators */
+#regression-table th .w-3.h-3 {
+    flex-shrink: 0;
+    border: 1px solid hsl(var(--bc) / 0.3);
+}
+
+/* Visualization button states */
+#visualize-regression-btn.btn-active {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+    border-color: hsl(var(--p));
+}
+
+/* Modal enhancements for visualization section */
+.modal-box .card.bg-primary\/5 {
+    background-color: hsl(var(--p) / 0.05);
+    border-color: hsl(var(--p) / 0.2);
+}
+
+.modal-box .card.bg-primary\/5 .badge-primary {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+}
+
+/* Range control enhancements */
+.modal-box .card.bg-base-200\/50 {
+    background-color: hsl(var(--b2) / 0.5);
+    border: 1px solid hsl(var(--bc) / 0.1);
+}
+
+.modal-box .badge-info {
+    background-color: hsl(var(--in));
+    color: hsl(var(--inc));
+}
+
+/* Toast enhancements for regression */
+.alert.alert-success {
+    background-color: hsl(var(--su) / 0.1);
+    border-color: hsl(var(--su) / 0.2);
+    color: hsl(var(--suc));
+}
+
+.alert.alert-error {
+    background-color: hsl(var(--er) / 0.1);
+    border-color: hsl(var(--er) / 0.2);
+    color: hsl(var(--erc));
+}
+
+.alert.alert-warning {
+    background-color: hsl(var(--wa) / 0.1);
+    border-color: hsl(var(--wa) / 0.2);
+    color: hsl(var(--wac));
+}
+
+.alert.alert-info {
+    background-color: hsl(var(--in) / 0.1);
+    border-color: hsl(var(--in) / 0.2);
+    color: hsl(var(--inc));
+}
+
+/* Chart container adjustments for regression lines */
+#chart-container {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Regression line legend in chart */
+.regression-chart-legend {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background-color: hsl(var(--b1) / 0.9);
+    border: 1px solid hsl(var(--bc) / 0.2);
     border-radius: 0.5rem;
+    padding: 0.75rem;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    max-width: 200px;
 }
 
-/* Tab styling */
-.modal-box .tab {
-    color: hsl(var(--bc));
-    opacity: 0.7;
-    transition: all 0.2s;
-}
-
-.modal-box .tab:hover {
-    opacity: 1;
-}
-
-.modal-box .tab-active {
-    background-color: hsl(var(--b1));
-    color: hsl(var(--bc));
-    opacity: 1;
+.regression-chart-legend h5 {
+    font-size: 0.75rem;
     font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: hsl(var(--bc));
 }
 
-/* Tab content visibility */
-.tab-content {
-    display: block;
+.regression-chart-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.7rem;
 }
 
-.tab-content.hidden {
-    display: none !important;
-}
-
-/* Form controls */
-.modal-box .form-control {
-    margin-bottom: 1rem;
-}
-
-.modal-box .form-control:last-child {
+.regression-chart-legend .legend-item:last-child {
     margin-bottom: 0;
 }
 
-.modal-box .label {
+.regression-chart-legend .legend-color {
+    width: 16px;
+    height: 2px;
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+.regression-chart-legend .legend-text {
     color: hsl(var(--bc));
-    padding: 0.5rem 0;
+    font-family: monospace;
 }
 
-.modal-box .label-text {
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-/* Input styling */
-.modal-box input[type="text"] {
-    background-color: hsl(var(--b2));
-    color: hsl(var(--bc));
-    border: 1px solid hsl(var(--bc) / 0.2);
-}
-
-.modal-box input[type="text"]:focus {
-    outline: 2px solid hsl(var(--p));
-    outline-offset: 2px;
-}
-
-/* Color inputs */
-.modal-box input[type="color"] {
-    width: 100%;
-    height: 2.5rem;
-    border: 1px solid hsl(var(--bc) / 0.2);
-    border-radius: 0.375rem;
-    cursor: pointer;
-    background-color: hsl(var(--b2));
-}
-
-.modal-box input[type="color"]::-webkit-color-swatch-wrapper {
-    padding: 0.25rem;
-}
-
-.modal-box input[type="color"]::-webkit-color-swatch {
-    border: none;
-    border-radius: 0.25rem;
-}
-
-/* Toggle styling */
-.modal-box .toggle {
-    --tglbg: hsl(var(--b3));
-}
-
-.modal-box .toggle:checked {
-    --tglbg: hsl(var(--p));
-}
-
-/* Divider styling */
-.modal-box .divider {
-    margin: 1.5rem 0;
-    height: 1px;
-    background: hsl(var(--bc) / 0.1);
-}
-
-.modal-box .divider::before,
-.modal-box .divider::after {
-    background: transparent;
-}
-
-/* Grid layout */
-.modal-box .grid {
-    display: grid;
-    gap: 1rem;
-}
-
-.modal-box .grid-cols-2 {
-    grid-template-columns: repeat(2, 1fr);
-}
-
-/* Text styling */
-.modal-box p.font-bold {
-    color: hsl(var(--bc));
-    margin-bottom: 0.75rem;
-    font-size: 1rem;
-}
-
-/* Modal action buttons */
-.modal-box .modal-action {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid hsl(var(--bc) / 0.1);
-}
-
-/* Success/Error text colors */
-.text-success {
-    color: hsl(var(--su));
-}
-
-.text-error {
-    color: hsl(var(--er));
-}
-
-/* Regression table styling */
-#regression-table-container {
-    transition: all 0.3s ease-in-out;
-    padding: 1rem;
-    background-color: hsl(var(--b1));
-}
-
-#regression-table-container.hidden {
-    display: none;
-}
-
-#regression-table {
-    background-color: hsl(var(--b1));
-}
-
-#regression-table th {
-    background-color: hsl(var(--b2));
-    color: hsl(var(--bc));
-    font-weight: 600;
-}
-
-#regression-table td {
-    color: hsl(var(--bc));
-}
-
-/* Responsive styles */
+/* Responsive adjustments for mobile */
 @media (max-width: 768px) {
-    .modal-box {
-        width: 95vw;
-        max-width: 95vw;
-        margin: 1rem;
+    .regression-legend .grid {
+        grid-template-columns: repeat(2, 1fr);
     }
     
-    .modal-box .grid-cols-2 {
-        grid-template-columns: 1fr;
+    .regression-chart-legend {
+        top: 40px;
+        right: 5px;
+        max-width: 150px;
+        padding: 0.5rem;
     }
+    
+    .regression-chart-legend h5 {
+        font-size: 0.7rem;
+    }
+    
+    .regression-chart-legend .legend-item {
+        font-size: 0.65rem;
+    }
+}
+
+/* Animation for regression lines appearing */
+@keyframes regressionLineAppear {
+    from {
+        opacity: 0;
+        transform: scaleY(0);
+    }
+    to {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+/* Loading state for regression analysis */
+.regression-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background-color: hsl(var(--b2) / 0.5);
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+}
+
+.regression-loading .loading-spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid hsl(var(--bc) / 0.2);
+    border-top: 2px solid hsl(var(--p));
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Status indicators */
+.regression-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: hsl(var(--b2));
+}
+
+.regression-status.connected {
+    background-color: hsl(var(--su) / 0.1);
+    color: hsl(var(--suc));
+}
+
+.regression-status.disconnected {
+    background-color: hsl(var(--er) / 0.1);
+    color: hsl(var(--erc));
+}
+
+.regression-status.loading {
+    background-color: hsl(var(--wa) / 0.1);
+    color: hsl(var(--wac));
+}
+
+/* Pulse animation for live updates */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.regression-live-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: hsl(var(--su));
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* Enhanced table scrolling */
+#regression-table-scroll-container {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--bc) / 0.3) hsl(var(--b2));
+}
+
+#regression-table-scroll-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+#regression-table-scroll-container::-webkit-scrollbar-track {
+    background: hsl(var(--b2));
+    border-radius: 4px;
+}
+
+#regression-table-scroll-container::-webkit-scrollbar-thumb {
+    background: hsl(var(--bc) / 0.3);
+    border-radius: 4px;
+}
+
+#regression-table-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--bc) / 0.5);
+}
+
+/* Timeframe selector enhancement */
+.timeframe-selector {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.timeframe-selector select {
+    background-color: hsl(var(--b1));
+    border: 1px solid hsl(var(--bc) / 0.2);
+    color: hsl(var(--bc));
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Dark mode specific adjustments */
+[data-theme="dark"] .regression-legend {
+    background-color: hsl(215 28% 17% / 0.9);
+    border-color: hsl(215 16% 47% / 0.2);
+}
+
+[data-theme="dark"] .regression-chart-legend {
+    background-color: hsl(215 28% 17% / 0.95);
+    border-color: hsl(215 16% 47% / 0.3);
+}
+
+[data-theme="dark"] .regression-chart-legend .legend-text {
+    color: hsl(215 16% 87%);
+}
+
+/* Light mode specific adjustments */
+[data-theme="light"] .regression-legend {
+    background-color: hsl(0 0% 100% / 0.9);
+    border-color: hsl(0 0% 0% / 0.1);
+}
+
+[data-theme="light"] .regression-chart-legend {
+    background-color: hsl(0 0% 100% / 0.95);
+    border-color: hsl(0 0% 0% / 0.15);
+}
+
+[data-theme="light"] .regression-chart-legend .legend-text {
+    color: hsl(0 0% 20%);
 }
