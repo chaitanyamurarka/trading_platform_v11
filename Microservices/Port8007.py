@@ -595,10 +595,12 @@ class LiveRegressionService:
                 
                 candles_for_regression = all_candles[start_index:end_index]
                 
-                timestamps = [c.unix_timestamp for c in reversed(candles_for_regression)]
+                # Create a simple integer sequence for the x-axis
+                x_values = list(range(len(candles_for_regression)))
                 closes = [c.close for c in reversed(candles_for_regression)]
                 
-                slope, intercept, r_value, p_value, std_err = stats.linregress(timestamps, closes)
+                # Perform regression against the simple sequence
+                slope, intercept, r_value, p_value, std_err = stats.linregress(x_values, closes)
                 logger.debug(f"Regression calculation intermediate steps: Calculated linregress for {context_key} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}") # DEBUG: Regression calculation intermediate steps
                 
                 results[str(lookback)] = {

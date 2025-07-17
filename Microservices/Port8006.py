@@ -272,12 +272,13 @@ class RegressionService:
                     logger.warning(f"Missing data scenarios: Not enough candles for regression: {len(candles_for_regression)}") # WARNING: Missing data scenarios
                     continue
 
-                # Timestamps should be in ascending order for regression
-                timestamps = [c.unix_timestamp for c in reversed(candles_for_regression)]
+                # Create a simple integer sequence for the x-axis to match PineScript's logic
+                x_values = list(range(len(candles_for_regression)))
                 closes = [c.close for c in reversed(candles_for_regression)]
 
                 try:
-                    slope, intercept, r_value, p_value, std_err = stats.linregress(timestamps, closes)
+                    # Perform regression against the simple sequence, not timestamps
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(x_values, closes)
                     logger.debug(f"Regression calculation intermediate steps: Calculated linregress for {request.symbol} {timeframe.value} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}") # DEBUG: Regression calculation intermediate steps
                     
                     timeframe_results.results[str(lookback)] = RegressionResult(
