@@ -255,7 +255,8 @@ class RegressionVisualizer {
         this.regressionLines.clear();
         console.log('🧹 Cleared all regression lines');
     }
-
+    
+    // ... (other methods remain the same) ...
     startLiveUpdates() {
         console.log('📡 Started live regression line updates');
     }
@@ -295,67 +296,6 @@ class RegressionVisualizer {
             this.currentTimeframe = timeframe;
             this.updateRegressionLines(store.get('regressionResults'));
         }
-    }
-
-    getLineInfo() {
-        const lineInfo = [];
-        this.regressionLines.forEach((lineData, lookback) => {
-            lineInfo.push({
-                lookback: lookback,
-                color: lineData.color,
-                slope: lineData.slope,
-                r_value: lineData.r_value,
-                r_squared: lineData.r_value * lineData.r_value
-            });
-        });
-        return lineInfo.sort((a, b) => a.lookback - b.lookback);
-    }
-
-    updateRegressionLength(newLength) {
-        this.currentRegressionLength = newLength;
-        console.log(`📊 Updated regression length to: ${newLength}`);
-        
-        if (this.isVisualizationEnabled) {
-            this.updateRegressionLines(store.get('regressionResults'));
-        }
-    }
-
-    // Debug method to investigate live mode issues
-    debugLiveMode() {
-        const isLiveMode = store.get('isLiveMode');
-        const chartData = store.get('chartData');
-        const results = store.get('regressionResults');
-        
-        console.log('🔍 DEBUG LIVE MODE:');
-        console.log(`   Live mode: ${isLiveMode}`);
-        console.log(`   Chart data length: ${chartData?.length || 0}`);
-        console.log(`   Has regression results: ${!!results}`);
-        console.log(`   Visualization enabled: ${this.isVisualizationEnabled}`);
-        console.log(`   Active lines: ${this.regressionLines.size}`);
-        
-        if (chartData && chartData.length > 0) {
-            console.log(`   Latest candle: time=${chartData[chartData.length-1].time}, price=${chartData[chartData.length-1].close}`);
-        }
-        
-        if (results && results.regression_results) {
-            const currentInterval = store.get('selectedInterval');
-            const matchingTimeframe = results.regression_results.find(r => r.timeframe === currentInterval);
-            if (matchingTimeframe) {
-                console.log(`   Slopes for ${currentInterval}:`, Object.entries(matchingTimeframe.results).map(([k,v]) => `${k}:${v.slope.toFixed(8)}`));
-            }
-        }
-        
-        // Check individual line data
-        this.regressionLines.forEach((lineData, lookback) => {
-            console.log(`   Line ${lookback}: slope=${lineData.slope.toFixed(8)}, points=${lineData.linePoints?.length || 0}`);
-            if (lineData.linePoints && lineData.linePoints.length > 1) {
-                const first = lineData.linePoints[0];
-                const last = lineData.linePoints[lineData.linePoints.length - 1];
-                console.log(`     First: time=${first.time}, value=${first.value.toFixed(6)}`);
-                console.log(`     Last: time=${last.time}, value=${last.value.toFixed(6)}`);
-                console.log(`     Actual slope: ${((last.value - first.value) / (last.time - first.time)).toFixed(10)}`);
-            }
-        });
     }
 }
 
