@@ -188,40 +188,20 @@ class RegressionTable {
         regression_results.forEach((timeframeResult, index) => {
             const row = document.createElement('tr');
             
-            // Add visual indicator for current chart timeframe
-            const isCurrentTimeframe = timeframeResult.timeframe === this.store.get('selectedInterval');
-            if (isCurrentTimeframe) {
-                row.classList.add('bg-primary', 'bg-opacity-10');
-            }
-            
             // Sr. No. cell (sticky left)
             const srCell = row.insertCell();
             srCell.textContent = index + 1;
             srCell.className = 'sticky left-0 z-10 bg-base-100 border-r border-base-300 text-center w-16';
-            if (isCurrentTimeframe) {
-                srCell.classList.add('bg-primary', 'bg-opacity-10');
-            }
             
-            // Timeframe cell (sticky left) with chart indicator
+            // Timeframe cell (sticky left)
             const timeframeCell = row.insertCell();
-            timeframeCell.innerHTML = isCurrentTimeframe ? 
-                `<div class="flex items-center justify-center gap-1">
-                    <i class="fas fa-chart-bar text-primary" title="Current chart timeframe"></i>
-                    <span>${timeframeResult.timeframe}</span>
-                 </div>` : 
-                timeframeResult.timeframe;
+            timeframeCell.textContent = timeframeResult.timeframe;
             timeframeCell.className = 'sticky left-16 z-10 bg-base-100 border-r border-base-300 text-center font-medium w-24';
-            if (isCurrentTimeframe) {
-                timeframeCell.classList.add('bg-primary', 'bg-opacity-10');
-            }
 
             // Regression Length cell (sticky left)
             const regressionLengthCell = row.insertCell();
             regressionLengthCell.textContent = request_params.regression_length;
             regressionLengthCell.className = 'sticky left-40 z-10 bg-base-100 border-r border-base-300 text-center w-24';
-            if (isCurrentTimeframe) {
-                regressionLengthCell.classList.add('bg-primary', 'bg-opacity-10');
-            }
 
             let totalRValue = 0;
             let rValueCount = 0;
@@ -266,9 +246,6 @@ class RegressionTable {
                 rValueTd.className = 'text-center text-base-content/60';
             }
             rValueTd.classList.add('sticky', 'right-0', 'bg-base-100', 'border-l', 'border-base-300');
-            if (isCurrentTimeframe) {
-                rValueTd.classList.add('bg-primary', 'bg-opacity-10');
-            }
             
             tableBody.appendChild(row);
         });
