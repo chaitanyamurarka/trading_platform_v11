@@ -78,7 +78,9 @@ class Candle(BaseModel):
 
 class LiveRegressionResult(BaseModel):
     slope: float = Field(..., description="The slope of the regression line")
+    intercept: float = Field(..., description="The intercept of the regression line.")
     r_value: float = Field(..., description="The R-value (correlation coefficient)")
+    std_dev: float = Field(..., description="The standard deviation from the regression line.")
     timestamp: str = Field(..., description="ISO timestamp when this result was calculated")
 
 # InfluxDB Client Setup
@@ -596,16 +598,24 @@ class LiveRegressionService:
                 candles_for_regression = all_candles[start_index:end_index]
                 
                 # Create a simple integer sequence for the x-axis
-                x_values = list(range(len(candles_for_regression)))
-                closes = [c.close for c in reversed(candles_for_regression)]
-                
+                x_values = np.array(range(len(candles_for_regression)))
+                closes = np.array([c.close for c in reversed(candles_for_regression)])
+
                 # Perform regression against the simple sequence
                 slope, intercept, r_value, p_value, std_err = stats.linregress(x_values, closes)
-                logger.debug(f"Regression calculation intermediate steps: Calculated linregress for {context_key} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}") # DEBUG: Regression calculation intermediate steps
+                
+                # Calculate the standard deviation of the residuals
+                predicted_y = intercept + slope * x_values
+                residuals = closes - predicted_y
+                std_dev = np.std(residuals)
+
+                logger.debug(f"Regression calculation intermediate steps: ... std_dev={std_dev:.4f}")
                 
                 results[str(lookback)] = {
                     "slope": slope,
+                    "intercept": intercept,
                     "r_value": r_value,
+                    "std_dev": std_dev,
                     "timestamp": datetime.now().isoformat()
                 }
             

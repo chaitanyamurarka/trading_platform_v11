@@ -80,7 +80,9 @@ class RegressionRequest(BaseModel):
 
 class RegressionResult(BaseModel):
     slope: float = Field(..., description="The slope of the regression line.")
+    intercept: float = Field(..., description="The intercept of the regression line.")
     r_value: float = Field(..., description="The R-value of the regression.")
+    std_dev: float = Field(..., description="The standard deviation from the regression line.")
 
 class TimeframeRegressionResult(BaseModel):
     timeframe: Interval
@@ -273,19 +275,31 @@ class RegressionService:
                     continue
 
                 # Create a simple integer sequence for the x-axis to match PineScript's logic
-                x_values = list(range(len(candles_for_regression)))
-                closes = [c.close for c in reversed(candles_for_regression)]
+                x_values = np.array(range(len(candles_for_regression)))
+                closes = np.array([c.close for c in reversed(candles_for_regression)])
 
                 try:
-                    # Perform regression against the simple sequence, not timestamps
+                    # Perform regression against the simple sequence
                     slope, intercept, r_value, p_value, std_err = stats.linregress(x_values, closes)
-                    logger.debug(f"Regression calculation intermediate steps: Calculated linregress for {request.symbol} {timeframe.value} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}") # DEBUG: Regression calculation intermediate steps
+                    
+                    # Calculate the predicted values for each point on the line
+                    predicted_y = intercept + slope * x_values
+                    
+                    # Calculate the standard deviation of the residuals (the distance from the line)
+                    residuals = closes - predicted_y
+                    std_dev = np.std(residuals)
+
+                    # Log the successful calculation
+                    logger.debug(f"Regression calculation intermediate steps: ... std_dev={std_dev:.4f}")
                     
                     timeframe_results.results[str(lookback)] = RegressionResult(
-                        slope=slope, 
-                        r_value=r_value
+                        slope=slope,
+                        intercept=intercept, 
+                        r_value=r_value,
+                        std_dev=std_dev
                     )
-                    logger.info(f"Calculated regression for {request.symbol} {timeframe.value} lookback {lookback}: slope={slope:.6f}, r_value={r_value:.4f}")
+                    logger.info(f"Calculated regression for ... std_dev={std_dev:.4f}")
+
                 except Exception as e:
                     logger.error(f"Critical data processing errors: Error calculating regression for lookback {lookback}: {e}") # ERROR: Critical data processing errors
                     continue
