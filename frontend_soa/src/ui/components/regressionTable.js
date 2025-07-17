@@ -117,7 +117,7 @@ class RegressionTable {
         if (!data || !data.regression_results) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center p-4 text-base-content/60">
+                    <td colspan="11" class="text-center p-4 text-base-content/60">
                         No indicators applied. Use the 'Indicators' button to run an analysis.
                     </td>
                 </tr>`;
@@ -128,7 +128,7 @@ class RegressionTable {
         if (!regression_results || regression_results.length === 0) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center p-4 text-base-content/60">
+                    <td colspan="11" class="text-center p-4 text-base-content/60">
                         No regression results returned for the selected parameters.
                     </td>
                 </tr>`;
@@ -145,14 +145,20 @@ class RegressionTable {
         // Sr. No. column (sticky left)
         const srNoTh = document.createElement('th');
         srNoTh.textContent = 'Sr. No.';
-        srNoTh.className = 'sticky left-0 z-20 bg-base-100 border-r border-base-300 text-center';
+        srNoTh.className = 'sticky left-0 z-20 bg-base-100 border-r border-base-300 text-center w-16';
         headerRow.appendChild(srNoTh);
 
         // Timeframe column (sticky left)
         const timeframeTh = document.createElement('th');
         timeframeTh.textContent = 'Timeframe';
-        timeframeTh.className = 'sticky left-16 z-20 bg-base-100 border-r border-base-300 text-center';
+        timeframeTh.className = 'sticky left-16 z-20 bg-base-100 border-r border-base-300 text-center w-24';
         headerRow.appendChild(timeframeTh);
+
+        // Regression Length column (sticky left)
+        const regressionLengthTh = document.createElement('th');
+        regressionLengthTh.textContent = 'Reg. Length';
+        regressionLengthTh.className = 'sticky left-40 z-20 bg-base-100 border-r border-base-300 text-center w-24';
+        headerRow.appendChild(regressionLengthTh);
 
         // Slope columns (in descending order) with color indicators
         sortedLookbackPeriods.forEach(period => {
@@ -191,7 +197,7 @@ class RegressionTable {
             // Sr. No. cell (sticky left)
             const srCell = row.insertCell();
             srCell.textContent = index + 1;
-            srCell.className = 'sticky left-0 bg-base-100 border-r border-base-300 text-center';
+            srCell.className = 'sticky left-0 z-10 bg-base-100 border-r border-base-300 text-center w-16';
             if (isCurrentTimeframe) {
                 srCell.classList.add('bg-primary', 'bg-opacity-10');
             }
@@ -204,9 +210,17 @@ class RegressionTable {
                     <span>${timeframeResult.timeframe}</span>
                  </div>` : 
                 timeframeResult.timeframe;
-            timeframeCell.className = 'sticky left-16 bg-base-100 border-r border-base-300 text-center font-medium';
+            timeframeCell.className = 'sticky left-16 z-10 bg-base-100 border-r border-base-300 text-center font-medium w-24';
             if (isCurrentTimeframe) {
                 timeframeCell.classList.add('bg-primary', 'bg-opacity-10');
+            }
+
+            // Regression Length cell (sticky left)
+            const regressionLengthCell = row.insertCell();
+            regressionLengthCell.textContent = request_params.regression_length;
+            regressionLengthCell.className = 'sticky left-40 z-10 bg-base-100 border-r border-base-300 text-center w-24';
+            if (isCurrentTimeframe) {
+                regressionLengthCell.classList.add('bg-primary', 'bg-opacity-10');
             }
 
             let totalRValue = 0;
