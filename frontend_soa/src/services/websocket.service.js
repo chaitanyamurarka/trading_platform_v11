@@ -138,6 +138,32 @@ class WebSocketService {
         if (completed_bar) {
             console.log('📊 Updating completed bar:', completed_bar.unix_timestamp);
             chartController.updateBar(completed_bar);
+            
+            // Update the store's chart data
+            const currentChartData = store.get('chartData') || [];
+            const existingIndex = currentChartData.findIndex(bar => bar.time === completed_bar.unix_timestamp);
+            
+            if (existingIndex >= 0) {
+                currentChartData[existingIndex] = {
+                    time: completed_bar.unix_timestamp,
+                    open: completed_bar.open,
+                    high: completed_bar.high,
+                    low: completed_bar.low,
+                    close: completed_bar.close
+                };
+            } else {
+                currentChartData.push({
+                    time: completed_bar.unix_timestamp,
+                    open: completed_bar.open,
+                    high: completed_bar.high,
+                    low: completed_bar.low,
+                    close: completed_bar.close
+                });
+                currentChartData.sort((a, b) => a.time - b.time);
+            }
+            
+            // Trigger store update which will cascade to regression visualizer
+            store.set('chartData', [...currentChartData]);
         }
 
         // Update current bar
@@ -145,8 +171,13 @@ class WebSocketService {
             console.log('📊 Updating current bar:', current_bar.unix_timestamp);
             chartController.updateBar(current_bar);
         }
-    }
 
+        // Emit custom event for any listeners
+        window.dispatchEvent(new CustomEvent('liveDataUpdate', {
+            detail: { completed_bar, current_bar }
+        }));
+    }
+    
     // Process buffered messages
     processMessageBuffer() {
         const bufferSize = this.websocketMessageBuffer.length;

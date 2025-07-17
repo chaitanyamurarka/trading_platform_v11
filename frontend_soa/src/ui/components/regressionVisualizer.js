@@ -13,7 +13,9 @@ class RegressionVisualizer {
             '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
             '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
         ];
-        this.lastKnownSlopes = new Map(); // Cache slopes for comparison
+        this.lastKnownSlopes = new Map();
+        this.updateDebounceTimer = null;
+        this.liveUpdateInterval = null; // Add interval for periodic updates
     }
 
     initialize() {
@@ -33,7 +35,44 @@ class RegressionVisualizer {
             }
         });
 
+        store.subscribe('isLiveMode', (isLive) => {
+            if (this.isVisualizationEnabled) {
+                if (isLive) {
+                    this.startLiveUpdateInterval();
+                    this.setupChartRangeListener();
+                } else {
+                    if (this.liveUpdateInterval) {
+                        clearInterval(this.liveUpdateInterval);
+                        this.liveUpdateInterval = null;
+                    }
+                }
+            }
+        });
+
         console.log('RegressionVisualizer initialized');
+    }
+
+    setupChartRangeListener() {
+        const chart = chartController.getChart();
+        if (!chart) return;
+        
+        // Subscribe to visible range changes
+        chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {
+            if (this.isVisualizationEnabled && store.get('isLiveMode')) {
+                // Debounce updates when the visible range changes
+                if (this.rangeChangeTimer) {
+                    clearTimeout(this.rangeChangeTimer);
+                }
+                
+                this.rangeChangeTimer = setTimeout(() => {
+                    console.log('📊 Chart range changed, updating regression lines...');
+                    const results = store.get('regressionResults');
+                    if (results) {
+                        this.updateRegressionLines(results);
+                    }
+                }, 300); // 300ms debounce
+            }
+        });
     }
 
     enableVisualization(timeframe) {
@@ -44,6 +83,14 @@ class RegressionVisualizer {
         if (results) {
             this.updateRegressionLines(results);
         }
+            
+        // Setup chart range listener
+        this.setupChartRangeListener();
+
+        // Start periodic updates if in live mode
+        if (store.get('isLiveMode')) {
+            this.startLiveUpdateInterval();
+        }
         
         showToast(`Regression visualization enabled for ${timeframe}`, 'success');
         console.log(`📈 Regression visualization enabled for ${timeframe}`);
@@ -52,8 +99,41 @@ class RegressionVisualizer {
     disableVisualization() {
         this.isVisualizationEnabled = false;
         this.clearAllLines();
+        
+        // Clear timers
+        if (this.updateDebounceTimer) {
+            clearTimeout(this.updateDebounceTimer);
+            this.updateDebounceTimer = null;
+        }
+        
+        // Clear interval
+        if (this.liveUpdateInterval) {
+            clearInterval(this.liveUpdateInterval);
+            this.liveUpdateInterval = null;
+        }
+        
         showToast('Regression visualization disabled', 'info');
         console.log('📉 Regression visualization disabled');
+    }
+
+    startLiveUpdateInterval() {
+        // Clear any existing interval
+        if (this.liveUpdateInterval) {
+            clearInterval(this.liveUpdateInterval);
+        }
+        
+        // Update regression lines every 2 seconds in live mode
+        this.liveUpdateInterval = setInterval(() => {
+            if (this.isVisualizationEnabled && store.get('isLiveMode')) {
+                const results = store.get('regressionResults');
+                if (results) {
+                    console.log('🔄 Periodic regression line update');
+                    this.updateRegressionLines(results);
+                }
+            }
+        }, 2000); // Update every 2 seconds
+        
+        console.log('📡 Started live update interval for regression lines');
     }
 
     updateRegressionLines(results) {
@@ -165,17 +245,16 @@ class RegressionVisualizer {
 
     calculateLinePointsWithValidation(lookbackPeriod, slope, chartData, isLiveMode) {
         try {
-            // Enhanced validation and logging
-            const sortedCandles = [...chartData].sort((a, b) => b.time - a.time);
+            // Always use the most recent data from the chart
+            const latestChartData = store.get('chartData') || chartData;
+            const sortedCandles = [...latestChartData].sort((a, b) => b.time - a.time);
             const dataLength = sortedCandles.length;
             
-            if (isLiveMode) {
+        if (isLiveMode) {
                 console.log(`🔴 LIVE CALCULATION - Lookback ${lookbackPeriod}:`);
                 console.log(`   Data length: ${dataLength}`);
-                console.log(`   Regression length: ${this.currentRegressionLength}`);
-                console.log(`   Slope from backend: ${slope.toFixed(10)}`);
+                console.log(`   Using latest chart data: ${latestChartData.length} candles`);
             }
-
             // Validation checks
             if (lookbackPeriod >= dataLength) {
                 console.warn(`Lookback ${lookbackPeriod} exceeds data length ${dataLength}`);
