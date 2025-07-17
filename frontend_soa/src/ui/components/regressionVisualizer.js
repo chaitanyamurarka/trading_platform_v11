@@ -185,17 +185,17 @@ class RegressionVisualizer {
 
         // --- Draw the lines ---
         const baseLineSeries = chart.addLineSeries({ ...sharedLineOptions, color: color, lineWidth: 2, title: `L${lookbackPeriod}` });
-        const upperLineSeries = chart.addLineSeries({ ...sharedLineOptions, color: '#367d39' }); // Green for upper
-        const lowerLineSeries = chart.addLineSeries({ ...sharedLineOptions, color: '#b53331' }); // Red for lower
+        // const upperLineSeries = chart.addLineSeries({ ...sharedLineOptions, color: '#367d39' }); // Green for upper
+        // const lowerLineSeries = chart.addLineSeries({ ...sharedLineOptions, color: '#b53331' }); // Red for lower
 
         baseLineSeries.setData(linePoints);
-        upperLineSeries.setData(upperChannelPoints);
-        lowerLineSeries.setData(lowerChannelPoints);
+        // upperLineSeries.setData(upperChannelPoints);
+        // lowerLineSeries.setData(lowerChannelPoints);
 
         this.regressionLines.set(lookbackPeriod, {
             base: baseLineSeries,
-            upper: upperLineSeries,
-            lower: lowerLineSeries,
+            // upper: upperLineSeries,
+            // lower: lowerLineSeries,
             color: color,
         });
 
