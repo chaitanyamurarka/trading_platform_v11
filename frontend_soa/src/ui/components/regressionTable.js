@@ -8,6 +8,7 @@ class RegressionTable {
         this.store = store;
         this.elements = getDomElements();
         this.visualizationEnabled = false;
+        this.isInitialRender = true;
     }
 
     initialize() {
@@ -253,10 +254,13 @@ class RegressionTable {
         // Add legend section below table
         this.renderLegend(sortedLookbackPeriods);
 
-        // Scroll the table to the rightmost position
-        const scrollContainer = document.getElementById('regression-table-scroll-container');
-        if (scrollContainer) {
-            scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+        // Scroll the table to the rightmost position only on the initial render
+        if (this.isInitialRender) {
+            const scrollContainer = document.getElementById('regression-table-scroll-container');
+            if (scrollContainer) {
+                scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+            }
+            this.isInitialRender = false;
         }
     }
 
