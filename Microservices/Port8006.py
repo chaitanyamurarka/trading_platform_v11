@@ -83,7 +83,6 @@ class RegressionResult(BaseModel):
     intercept: float = Field(..., description="The intercept of the regression line.")
     r_value: float = Field(..., description="The R-value of the regression.")
     std_dev: float = Field(..., description="The standard deviation from the regression line.")
-    start_timestamp: float = Field(..., description="The UNIX timestamp of the first candle in the regression.") # ADD THIS LINE
 
 class TimeframeRegressionResult(BaseModel):
     timeframe: Interval
@@ -270,14 +269,14 @@ class RegressionService:
                     continue
 
                 candles_for_regression = sorted_candles[start_index:end_index]
-                start_timestamp = candles_for_regression[0].unix_timestamp
 
                 if len(candles_for_regression) < 2:
                     logger.warning(f"Missing data scenarios: Not enough candles for regression: {len(candles_for_regression)}") # WARNING: Missing data scenarios
-                    continue  
-                
+                    continue
+
+                # Create a simple integer sequence for the x-axis to match PineScript's logic
                 x_values = np.array(range(len(candles_for_regression)))
-                closes = np.array([c.close for c in candles_for_regression])
+                closes = np.array([c.close for c in reversed(candles_for_regression)])
 
                 try:
                     # Perform regression against the simple sequence
@@ -297,8 +296,7 @@ class RegressionService:
                         slope=slope,
                         intercept=intercept, 
                         r_value=r_value,
-                        std_dev=std_dev,
-                        start_timestamp=start_timestamp 
+                        std_dev=std_dev
                     )
                     logger.info(f"Calculated regression for ... std_dev={std_dev:.4f}")
 

@@ -163,10 +163,8 @@ class RegressionVisualizer {
             return;
         }
 
-        const { slope, intercept, r_value, std_dev, start_timestamp } = regressionData; // ADD start_timestamp HERE
-        
-        // Pass the start_timestamp to calculateLinePoints
-        const linePoints = this.calculateLinePoints(lookbackPeriod, slope, intercept, chartData, start_timestamp); // MODIFY THIS LINE
+        const { slope, intercept, r_value, std_dev } = regressionData;
+        const linePoints = this.calculateLinePoints(lookbackPeriod, slope, intercept, chartData);
         
         if (linePoints.length === 0) {
             return;
@@ -204,59 +202,33 @@ class RegressionVisualizer {
         console.log(`📈 Created regression channel for lookback ${lookbackPeriod}`);
     }
 
-
-    calculateLinePoints(lookbackPeriod, slope, intercept, chartData, start_timestamp) { // ADD start_timestamp HERE
-        if (!start_timestamp) {
-            console.warn(`Cannot calculate line points for lookback ${lookbackPeriod} without a start_timestamp.`);
-            return [];
-        }
-
-        // --- START: TOLERANT TIMESTAMP MATCHING LOGIC ---
-        let closestIndex = -1;
-        let smallestDiff = Infinity;
-
-        for (let i = 0; i < chartData.length; i++) {
-            const diff = Math.abs(chartData[i].time - start_timestamp);
-            if (diff < smallestDiff) {
-                smallestDiff = diff;
-                closestIndex = i;
-            }
-        }
+    calculateLinePoints(lookbackPeriod, slope, intercept, chartData) {
+        const sortedCandles = [...chartData].sort((a, b) => b.time - a.time);
+        const dataLength = sortedCandles.length;
         
-        // Consider it a match if the difference is less than a small threshold (e.g., half a second)
-        if (closestIndex === -1 || smallestDiff > 0.5) {
-             console.warn(`Could not find a close enough starting candle for timestamp ${start_timestamp} (Lookback: ${lookbackPeriod}). Smallest difference was ${smallestDiff}`);
-             return [];
-        }
+        if (lookbackPeriod >= dataLength) return [];
 
-        const startIndex = closestIndex;
-        // --- END: TOLERANT TIMESTAMP MATCHING LOGIC ---
-
-        const dataLength = chartData.length;
+        const startIndex = lookbackPeriod;
         const endIndex = startIndex + this.currentRegressionLength;
 
-        if (endIndex > dataLength) {
-             console.warn(`Regression length extends beyond available chart data for lookback ${lookbackPeriod}.`);
-            return [];
-        }
-        
-        const linePoints = [];
-        for (let i = 0; i < this.currentRegressionLength; i++) {
-            const candleIndex = startIndex + i;
-            if (candleIndex >= dataLength) break;
+        if (endIndex > dataLength) return [];
 
-            const x_value = i;
+        const candlesForRegression = sortedCandles.slice(startIndex, endIndex);
+        if (candlesForRegression.length < 2) return [];
+
+        const linePoints = [];
+        for (let i = 0; i < candlesForRegression.length; i++) {
+            const x_value = candlesForRegression.length - 1 - i;
             const regressionValue = intercept + slope * x_value;
-            
             linePoints.push({
-                time: chartData[candleIndex].time,
+                time: candlesForRegression[i].time,
                 value: regressionValue
             });
         }
-        
-        return linePoints;
+
+        return linePoints.sort((a, b) => a.time - b.time);
     }
- 
+
     getColorForLookback(lookbackPeriod) {
         const commonColors = {
             0: '#FF6B6B', 1: '#4ECDC4', 2: '#45B7D1', 3: '#96CEB4', 
