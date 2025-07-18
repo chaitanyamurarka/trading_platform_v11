@@ -1,4 +1,4 @@
-# Port 8006 - Linear Regression Service
+# Port 8006 - Linear Regression Service with Paging Support
 import logging
 import sys
 import os
@@ -9,9 +9,9 @@ import pandas as pd
 import re
 import numpy as np
 from datetime import datetime, timezone as dt_timezone, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from enum import Enum
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
@@ -77,36 +77,63 @@ class RegressionRequest(BaseModel):
     regression_length: int = Field(..., description="The number of candles to use for the regression calculation.")
     lookback_periods: List[int] = Field(..., description="A list of lookback periods from the current candle.")
     timeframes: List[Interval] = Field(..., description="A list of timeframes to perform the regression on.")
+    # NEW: Add timestamp fields for consistency
+    start_time: Optional[datetime] = Field(None, description="Start time for data fetching")
+    end_time: Optional[datetime] = Field(None, description="End time for data fetching")
+    timezone: str = Field("UTC", description="Timezone for data processing")
 
 class RegressionResult(BaseModel):
     slope: float = Field(..., description="The slope of the regression line.")
     intercept: float = Field(..., description="The intercept of the regression line.")
     r_value: float = Field(..., description="The R-value of the regression.")
     std_dev: float = Field(..., description="The standard deviation from the regression line.")
+    timestamp: str = Field(..., description="ISO timestamp when this result was calculated")
 
 class TimeframeRegressionResult(BaseModel):
     timeframe: Interval
     results: Dict[str, RegressionResult]
+    data_count: int = Field(..., description="Number of data points used")
+    is_partial: bool = Field(False, description="Whether this is a partial result")
 
 class RegressionResponse(BaseModel):
     request_params: RegressionRequest
     regression_results: List[TimeframeRegressionResult]
+    request_id: Optional[str] = Field(None, description="Cursor for pagination if results are partial")
+    is_partial: bool = Field(False, description="Whether more results are available")
+    timestamp: str = Field(..., description="ISO timestamp of the response")
+
+# NEW: Paging-related schemas
+class RegressionPageRequest(BaseModel):
+    request_id: str = Field(..., description="The pagination cursor from previous response")
+    limit: int = Field(50, ge=1, le=100, description="Maximum number of lookback periods per page")
+
+class PaginationState(BaseModel):
+    """State information for pagination"""
+    original_request: RegressionRequest
+    processed_timeframes: List[str] = []
+    current_timeframe_index: int = 0
+    current_lookback_index: int = 0
+    total_results: Dict[str, TimeframeRegressionResult] = {}
 
 # InfluxDB Client Setup
 influx_client = InfluxDBClient(url=settings.INFLUX_URL, token=settings.INFLUX_TOKEN, org=settings.INFLUX_ORG, timeout=60_000)
 query_api = influx_client.query_api()
+
+# Constants
 INITIAL_FETCH_LIMIT = 5000
+MAX_CANDLES_PER_FETCH = 10000  # Maximum candles to fetch per timeframe
+LOOKBACK_PERIODS_PER_PAGE = 20  # Number of lookback periods to process per page
 
 class RegressionService:
     @staticmethod
     def _query_and_process_influx_data(flux_query: str, timezone_str: str) -> List[Candle]:
         """Helper to run a Flux query and convert results to Candle schemas."""
-        logger.debug(f"Detailed SQL/Flux query execution with full query text:\n{flux_query}") # DEBUG: Detailed SQL/Flux query execution
+        logger.debug(f"Detailed SQL/Flux query execution with full query text:\n{flux_query}")
         try:
             target_tz = ZoneInfo(timezone_str)
         except Exception:
             target_tz = ZoneInfo("UTC")
-            logger.warning(f"Invalid parameters with auto-correction: Timezone '{timezone_str}' not found. Defaulting to UTC.") # WARNING: Invalid parameters with auto-correction
+            logger.warning(f"Invalid parameters with auto-correction: Timezone '{timezone_str}' not found. Defaulting to UTC.")
 
         tables = query_api.query(query=flux_query)
         candles = []
@@ -135,13 +162,28 @@ class RegressionService:
                 ))
 
         candles.reverse()
-        logger.debug(f"Processed {len(candles)} candles from InfluxDB for regression") # DEBUG: Tick processing details
+        logger.debug(f"Processed {len(candles)} candles from InfluxDB for regression")
         return candles
 
     @staticmethod
-    def _fetch_data_full_range(token: str, interval_val: str, start_utc: datetime, end_utc: datetime, timezone: str, limit: int) -> List[Candle]:
-        """Fetch data by querying all measurements in the date range at once."""
-        logger.info("Using full-range fetch strategy for regression data.")
+    def _fetch_data_with_limit(token: str, interval_val: str, start_utc: datetime, end_utc: datetime, timezone: str, limit: int) -> Tuple[List[Candle], bool]:
+        """Fetch data with a specific limit and indicate if more data is available."""
+        is_high_frequency = interval_val.endswith('s') or interval_val.endswith('tick')
+        
+        if is_high_frequency:
+            candles = RegressionService._fetch_data_day_by_day_limited(token, interval_val, start_utc, end_utc, timezone, limit)
+        else:
+            candles = RegressionService._fetch_data_full_range_limited(token, interval_val, start_utc, end_utc, timezone, limit)
+        
+        # Check if we got the full limit, indicating more data might be available
+        is_more_data = len(candles) >= limit
+        
+        return candles, is_more_data
+
+    @staticmethod
+    def _fetch_data_full_range_limited(token: str, interval_val: str, start_utc: datetime, end_utc: datetime, timezone: str, limit: int) -> List[Candle]:
+        """Fetch data by querying all measurements in the date range with a limit."""
+        logger.info(f"Using full-range fetch strategy for regression data with limit {limit}.")
         et_zone = ZoneInfo("America/New_York")
         start_et, end_et = start_utc.astimezone(et_zone), end_utc.astimezone(et_zone)
         date_range = pd.date_range(start=start_et.date(), end=end_et.date(), freq='D')
@@ -165,9 +207,9 @@ class RegressionService:
         return RegressionService._query_and_process_influx_data(flux_query, timezone)
 
     @staticmethod
-    def _fetch_data_day_by_day(token: str, interval_val: str, start_utc: datetime, end_utc: datetime, timezone_str: str, limit: int) -> List[Candle]:
-        """Fetch data by querying day-by-day, newest to oldest, until the limit is reached."""
-        logger.info("Using day-by-day fetch strategy for regression data.")
+    def _fetch_data_day_by_day_limited(token: str, interval_val: str, start_utc: datetime, end_utc: datetime, timezone_str: str, limit: int) -> List[Candle]:
+        """Fetch data by querying day-by-day with a total limit."""
+        logger.info(f"Using day-by-day fetch strategy for regression data with limit {limit}.")
         all_candles = []
         
         et_zone = ZoneInfo("America/New_York")
@@ -178,7 +220,9 @@ class RegressionService:
 
         for day in date_range:
             remaining_limit = limit - len(all_candles)
-            
+            if remaining_limit <= 0:
+                break
+                
             day_start_et = datetime.combine(day, datetime.min.time(), tzinfo=et_zone)
             day_end_et = day_start_et + timedelta(days=1)
             
@@ -200,121 +244,189 @@ class RegressionService:
             daily_candles = RegressionService._query_and_process_influx_data(flux_query, timezone_str)
             if daily_candles:
                 all_candles = daily_candles + all_candles
-            
-            if len(all_candles) >= limit:
-                logger.info(f"Limit of {limit} reached. Stopping day-by-day fetch.")
-                break
                 
         all_candles.sort(key=lambda c: c.timestamp)
-        return all_candles
+        return all_candles[:limit]  # Ensure we don't exceed the limit
 
     @staticmethod
-    def get_historical_data(token: str, interval_val: str, start_time: datetime, end_time: datetime, timezone: str) -> List[Candle]:
-        """Get historical data for regression analysis."""
-        start_utc, end_utc = start_time.astimezone(dt_timezone.utc), end_time.astimezone(dt_timezone.utc)
+    def _create_pagination_cursor(state: PaginationState) -> str:
+        """Create a pagination cursor from the current state."""
+        cursor_data = {
+            "original_request": state.original_request.dict(),
+            "processed_timeframes": state.processed_timeframes,
+            "current_timeframe_index": state.current_timeframe_index,
+            "current_lookback_index": state.current_lookback_index,
+            "total_results": {k: v.dict() for k, v in state.total_results.items()}
+        }
+        return base64.urlsafe_b64encode(json.dumps(cursor_data).encode()).decode()
+
+    @staticmethod
+    def _decode_pagination_cursor(cursor: str) -> PaginationState:
+        """Decode a pagination cursor back to state."""
+        try:
+            cursor_data = json.loads(base64.urlsafe_b64decode(cursor).decode())
+            state = PaginationState(
+                original_request=RegressionRequest(**cursor_data["original_request"]),
+                processed_timeframes=cursor_data["processed_timeframes"],
+                current_timeframe_index=cursor_data["current_timeframe_index"],
+                current_lookback_index=cursor_data["current_lookback_index"],
+                total_results={k: TimeframeRegressionResult(**v) for k, v in cursor_data["total_results"].items()}
+            )
+            return state
+        except Exception as e:
+            logger.error(f"Error decoding pagination cursor: {e}")
+            raise HTTPException(status_code=400, detail="Invalid pagination cursor")
+
+    @staticmethod
+    def calculate_regression_paginated(request: RegressionRequest, page_size: int = LOOKBACK_PERIODS_PER_PAGE) -> RegressionResponse:
+        """Calculate linear regression with pagination support."""
+        state = PaginationState(original_request=request)
+        results = []
         
-        # Fetch enough data for the largest possible regression analysis
-        fetch_limit = 10000  # Increase limit for regression analysis
-        
-        is_high_frequency = interval_val.endswith('s') or interval_val.endswith('tick')
-        if is_high_frequency:
-            candles = RegressionService._fetch_data_day_by_day(token, interval_val, start_utc, end_utc, timezone, fetch_limit)
+        # Determine time range
+        if request.start_time and request.end_time:
+            start_time = request.start_time.astimezone(dt_timezone.utc)
+            end_time = request.end_time.astimezone(dt_timezone.utc)
         else:
-            candles = RegressionService._fetch_data_full_range(token, interval_val, start_utc, end_utc, timezone, fetch_limit)
-
-        return candles
-
-    @staticmethod
-    def calculate_regression(request: RegressionRequest) -> List[TimeframeRegressionResult]:
-        """Calculate linear regression for the given request."""
-        all_results = []
-
-        for timeframe in request.timeframes:
-            timeframe_results = TimeframeRegressionResult(timeframe=timeframe, results={})
-
-            # Fetch initial data to get the latest timestamp
+            # Default to last 90 days if not specified
             end_time = datetime.now(dt_timezone.utc)
-            start_time = end_time - timedelta(days=90)  # Look back up to 90 days
-
+            start_time = end_time - timedelta(days=90)
+        
+        timezone = request.timezone or "UTC"
+        
+        # Process timeframes
+        for tf_index, timeframe in enumerate(request.timeframes):
+            if tf_index < state.current_timeframe_index:
+                continue  # Skip already processed timeframes
+                
+            timeframe_result = TimeframeRegressionResult(
+                timeframe=timeframe,
+                results={},
+                data_count=0,
+                is_partial=False
+            )
+            
+            # Fetch data for this timeframe with limit
             try:
-                candles = RegressionService.get_historical_data(
+                candles, has_more_data = RegressionService._fetch_data_with_limit(
                     token=request.symbol,
                     interval_val=timeframe.value,
-                    start_time=start_time,
-                    end_time=end_time,
-                    timezone="UTC"
+                    start_utc=start_time,
+                    end_utc=end_time,
+                    timezone=timezone,
+                    limit=MAX_CANDLES_PER_FETCH
                 )
+                
+                if not candles:
+                    logger.warning(f"No candles found for {request.symbol} on timeframe {timeframe.value}")
+                    continue
+                
+                sorted_candles = sorted(candles, key=lambda c: c.unix_timestamp, reverse=True)
+                timeframe_result.data_count = len(sorted_candles)
+                
+                # Process lookback periods for this page
+                lookback_start = state.current_lookback_index if tf_index == state.current_timeframe_index else 0
+                lookback_end = min(lookback_start + page_size, len(request.lookback_periods))
+                
+                for lb_index in range(lookback_start, lookback_end):
+                    lookback = request.lookback_periods[lb_index]
+                    
+                    if lookback >= len(sorted_candles):
+                        logger.warning(f"Lookback period {lookback} exceeds available data ({len(sorted_candles)} candles)")
+                        continue
+                    
+                    start_index = lookback
+                    end_index = start_index + request.regression_length
+                    
+                    if end_index > len(sorted_candles):
+                        logger.warning(f"Regression length {request.regression_length} with lookback {lookback} exceeds available data")
+                        continue
+                    
+                    candles_for_regression = sorted_candles[start_index:end_index]
+                    
+                    if len(candles_for_regression) < 2:
+                        continue
+                    
+                    # Calculate regression
+                    x_values = np.array(range(len(candles_for_regression)))
+                    closes = np.array([c.close for c in reversed(candles_for_regression)])
+                    
+                    try:
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(x_values, closes)
+                        predicted_y = intercept + slope * x_values
+                        residuals = closes - predicted_y
+                        std_dev = np.std(residuals)
+                        
+                        timeframe_result.results[str(lookback)] = RegressionResult(
+                            slope=slope,
+                            intercept=intercept,
+                            r_value=r_value,
+                            std_dev=std_dev,
+                            timestamp=datetime.now().isoformat()
+                        )
+                        
+                    except Exception as e:
+                        logger.error(f"Error calculating regression for lookback {lookback}: {e}")
+                        continue
+                
+                # Check if we processed all lookback periods for this timeframe
+                if lookback_end < len(request.lookback_periods):
+                    timeframe_result.is_partial = True
+                    state.current_timeframe_index = tf_index
+                    state.current_lookback_index = lookback_end
+                else:
+                    state.current_lookback_index = 0
+                    state.processed_timeframes.append(timeframe.value)
+                
+                if timeframe_result.results:
+                    results.append(timeframe_result)
+                    state.total_results[timeframe.value] = timeframe_result
+                
+                # If we've filled a page, stop processing
+                if timeframe_result.is_partial:
+                    break
+                    
             except Exception as e:
-                logger.error(f"Could not fetch data for timeframe {timeframe.value}: {e}")
+                logger.error(f"Error processing timeframe {timeframe.value}: {e}")
                 continue
+        
+        # Determine if there are more results
+        is_partial = (
+            state.current_timeframe_index < len(request.timeframes) - 1 or
+            (state.current_timeframe_index == len(request.timeframes) - 1 and 
+             state.current_lookback_index < len(request.lookback_periods))
+        )
+        
+        # Create response
+        response = RegressionResponse(
+            request_params=request,
+            regression_results=results,
+            is_partial=is_partial,
+            timestamp=datetime.now().isoformat()
+        )
+        
+        if is_partial:
+            response.request_id = RegressionService._create_pagination_cursor(state)
+        
+        logger.info(f"Completed regression analysis page for {request.symbol}. Results: {len(results)} timeframes, partial: {is_partial}")
+        return response
 
-            if not candles:
-                logger.warning(f"Missing data scenarios: No candles found for {request.symbol} on timeframe {timeframe.value}") # WARNING: Missing data scenarios
-                continue
-
-            # Sort candles by timestamp descending to easily get the latest
-            sorted_candles = sorted(candles, key=lambda c: c.unix_timestamp, reverse=True)
-            logger.info(f"Processing {len(sorted_candles)} candles for {request.symbol} on {timeframe.value}")
-
-            for lookback in request.lookback_periods:
-                if lookback >= len(sorted_candles):
-                    logger.warning(f"Missing data scenarios: Lookback period {lookback} exceeds available data ({len(sorted_candles)} candles)") # WARNING: Missing data scenarios
-                    continue
-
-                start_index = lookback
-                end_index = start_index + request.regression_length
-
-                if end_index > len(sorted_candles):
-                    logger.warning(f"Missing data scenarios: Regression length {request.regression_length} with lookback {lookback} exceeds available data") # WARNING: Missing data scenarios
-                    continue
-
-                candles_for_regression = sorted_candles[start_index:end_index]
-
-                if len(candles_for_regression) < 2:
-                    logger.warning(f"Missing data scenarios: Not enough candles for regression: {len(candles_for_regression)}") # WARNING: Missing data scenarios
-                    continue
-
-                # Create a simple integer sequence for the x-axis to match PineScript's logic
-                x_values = np.array(range(len(candles_for_regression)))
-                closes = np.array([c.close for c in reversed(candles_for_regression)])
-
-                try:
-                    # Perform regression against the simple sequence
-                    slope, intercept, r_value, p_value, std_err = stats.linregress(x_values, closes)
-                    
-                    # Calculate the predicted values for each point on the line
-                    predicted_y = intercept + slope * x_values
-                    
-                    # Calculate the standard deviation of the residuals (the distance from the line)
-                    residuals = closes - predicted_y
-                    std_dev = np.std(residuals)
-
-                    # Log the successful calculation
-                    logger.debug(f"Regression calculation intermediate steps: ... std_dev={std_dev:.4f}")
-                    
-                    timeframe_results.results[str(lookback)] = RegressionResult(
-                        slope=slope,
-                        intercept=intercept, 
-                        r_value=r_value,
-                        std_dev=std_dev
-                    )
-                    logger.info(f"Calculated regression for ... std_dev={std_dev:.4f}")
-
-                except Exception as e:
-                    logger.error(f"Critical data processing errors: Error calculating regression for lookback {lookback}: {e}") # ERROR: Critical data processing errors
-                    continue
-
-            if timeframe_results.results:
-                all_results.append(timeframe_results)
-
-        logger.info(f"Completed regression analysis for {request.symbol}. Found results for {len(all_results)} timeframes.")
-        return all_results
+    @staticmethod
+    def get_next_regression_page(page_request: RegressionPageRequest) -> RegressionResponse:
+        """Get the next page of regression results."""
+        state = RegressionService._decode_pagination_cursor(page_request.request_id)
+        
+        # Continue from where we left off
+        return RegressionService.calculate_regression_paginated(
+            state.original_request,
+            page_size=page_request.limit
+        )
 
 # FastAPI App
 app = FastAPI(
     title="Linear Regression Service",
-    description="Service for calculating linear regression on historical data",
-    version="1.0.0",
+    description="Service for calculating linear regression on historical data with pagination support",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -343,7 +455,7 @@ async def shutdown_event():
 # Routes
 @app.post("/regression", response_model=RegressionResponse, tags=["Regression"])
 async def calculate_regression(request: RegressionRequest):
-    """Calculate linear regression on historical data for a given symbol."""
+    """Calculate linear regression on historical data with pagination support."""
     try:
         logger.info(f"Received regression request for {request.symbol} with {len(request.timeframes)} timeframes")
         
@@ -362,17 +474,21 @@ async def calculate_regression(request: RegressionRequest):
         
         if not request.timeframes:
             raise HTTPException(status_code=400, detail="At least one timeframe must be specified")
-
-        results = regression_service.calculate_regression(request)
         
-        if not results:
+        # Ensure timestamps are provided
+        if not request.start_time or not request.end_time:
+            logger.info("No timestamps provided, using default 90-day range")
+            request.end_time = datetime.now(dt_timezone.utc)
+            request.start_time = request.end_time - timedelta(days=90)
+
+        results = regression_service.calculate_regression_paginated(request)
+        
+        if not results.regression_results:
             logger.warning(f"No regression results found for {request.symbol}")
         else:
-            logger.info(f"Successful regression calculations: Completed regression analysis for {request.symbol}. Found results for {len(results)} timeframes.") # INFO: Successful regression calculations
+            logger.info(f"Successful regression calculations: Found results for {len(results.regression_results)} timeframes.")
             
-        response = RegressionResponse(request_params=request, regression_results=results)
-        logger.info(f"Returning regression results for {request.symbol}: {len(results)} timeframes processed")
-        return response
+        return results
         
     except HTTPException:
         raise
@@ -380,34 +496,65 @@ async def calculate_regression(request: RegressionRequest):
         logger.error(f"Error calculating regression: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error calculating regression: {str(e)}")
 
+@app.post("/regression/page", response_model=RegressionResponse, tags=["Regression"])
+async def get_regression_page(page_request: RegressionPageRequest):
+    """Get the next page of regression results using a pagination cursor."""
+    try:
+        logger.info(f"Fetching regression page with cursor: {page_request.request_id[:20]}...")
+        
+        results = regression_service.get_next_regression_page(page_request)
+        
+        logger.info(f"Returned {len(results.regression_results)} timeframe results, partial: {results.is_partial}")
+        return results
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching regression page: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching regression page: {str(e)}")
+
 @app.get("/regression/test/{symbol}", tags=["Regression"])
 async def test_regression(
     symbol: str,
     timeframe: Interval = Interval.MIN_5,
     regression_length: int = 20,
-    lookback_periods: str = "0,1,5,10"
+    lookback_periods: str = "0,1,5,10",
+    start_time: Optional[datetime] = Query(None),
+    end_time: Optional[datetime] = Query(None),
+    timezone: str = Query("UTC")
 ):
-    """Test regression calculation for a specific symbol."""
+    """Test regression calculation for a specific symbol with pagination."""
     try:
         lookback_list = [int(x.strip()) for x in lookback_periods.split(",")]
+        
+        # Use provided timestamps or defaults
+        if not end_time:
+            end_time = datetime.now(dt_timezone.utc)
+        if not start_time:
+            start_time = end_time - timedelta(days=30)
         
         test_request = RegressionRequest(
             symbol=symbol,
             exchange="test",
             regression_length=regression_length,
             lookback_periods=lookback_list,
-            timeframes=[timeframe]
+            timeframes=[timeframe],
+            start_time=start_time,
+            end_time=end_time,
+            timezone=timezone
         )
         
-        results = regression_service.calculate_regression(test_request)
+        results = regression_service.calculate_regression_paginated(test_request)
         
         return {
             "symbol": symbol,
             "timeframe": timeframe.value,
             "regression_length": regression_length,
             "lookback_periods": lookback_list,
-            "results": results,
-            "timestamp": datetime.now().isoformat()
+            "results": results.regression_results,
+            "is_partial": results.is_partial,
+            "request_id": results.request_id,
+            "timestamp": results.timestamp
         }
         
     except Exception as e:
@@ -422,18 +569,20 @@ async def health_check():
         # Test InfluxDB connection with a simple query
         test_query = f'from(bucket: "{settings.INFLUX_BUCKET}") |> range(start: -1m) |> limit(n: 1)'
         query_api.query(query=test_query)
-        logger.info("Health check results: InfluxDB connection successful.") # INFO: Health check results
+        logger.info("Health check results: InfluxDB connection successful.")
     except Exception as e:
         influx_connected = False
-        logger.error(f"Database connection failures: InfluxDB connection test failed: {e}") # ERROR: Database connection failures
+        logger.error(f"Database connection failures: InfluxDB connection test failed: {e}")
     
     status = "healthy" if influx_connected else "unhealthy"
-    logger.info(f"Health check results: Service status: {status}, InfluxDB connected: {influx_connected}") # INFO: Health check results
+    logger.info(f"Health check results: Service status: {status}, InfluxDB connected: {influx_connected}")
     
     return {
         "status": status,
         "influx_connected": influx_connected,
         "service": "linear_regression",
+        "version": "2.0.0",
+        "features": ["pagination", "timestamp_support"],
         "timestamp": datetime.now().isoformat()
     }
 
@@ -446,6 +595,13 @@ async def get_regression_status():
         "supported_timeframes": [interval.value for interval in Interval],
         "max_regression_length": 1000,
         "max_lookback_days": 90,
+        "max_candles_per_fetch": MAX_CANDLES_PER_FETCH,
+        "lookback_periods_per_page": LOOKBACK_PERIODS_PER_PAGE,
+        "features": {
+            "pagination": True,
+            "timestamp_support": True,
+            "multi_timeframe": True
+        },
         "timestamp": datetime.now().isoformat()
     }
 
@@ -455,6 +611,6 @@ if __name__ == "__main__":
         app, 
         host="0.0.0.0", 
         port=8006, 
-        log_level="warning",  # Suppress info/debug
-        access_log=False,     # No access logs in terminal
+        log_level="warning",
+        access_log=False,
     )

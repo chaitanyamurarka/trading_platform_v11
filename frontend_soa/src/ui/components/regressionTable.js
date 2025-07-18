@@ -1,7 +1,8 @@
-// frontend_soa/src/ui/components/regressionTable.js - Enhanced with visualization
+// frontend_soa/src/ui/components/regressionTable.js - Enhanced with pagination status
 import { store } from '../../state/store.js';
 import { getDomElements } from '../dom.js';
 import { regressionVisualizer } from './regressionVisualizer.js';
+import { indicatorService } from '../../services/indicator.service.js';
 
 class RegressionTable {
     constructor(store) {
@@ -41,6 +42,7 @@ class RegressionTable {
         });
 
         this.setupVisualizationControls();
+        this.setupPaginationControls();
         
         console.log('RegressionTable Component Initialized');
     }
@@ -64,6 +66,84 @@ class RegressionTable {
             if (removeBtn) {
                 headerContainer.insertBefore(visualizeBtn, removeBtn);
             }
+        }
+    }
+
+    setupPaginationControls() {
+        // Add pagination status container after regression table
+        const tableContainer = document.getElementById('regression-table-container');
+        if (!tableContainer) return;
+
+        // Create pagination status container
+        const paginationHTML = `
+            <div id="regression-pagination-status" class="mt-3 hidden">
+                <div class="flex items-center justify-between bg-base-200 rounded-lg p-3">
+                    <div class="flex items-center gap-3">
+                        <span class="loading loading-spinner loading-xs" id="pagination-spinner"></span>
+                        <span class="text-sm" id="pagination-status-text">Loading regression data...</span>
+                    </div>
+                    <button id="load-more-regression-btn" class="btn btn-xs btn-outline hidden">
+                        Load More Results
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Insert after the table scroll container
+        const scrollContainer = document.getElementById('regression-table-scroll-container');
+        if (scrollContainer && scrollContainer.parentElement) {
+            scrollContainer.parentElement.insertAdjacentHTML('afterend', paginationHTML);
+        }
+
+        // Setup load more button
+        const loadMoreBtn = document.getElementById('load-more-regression-btn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', async () => {
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Loading...';
+                
+                await indicatorService.loadMorePages();
+                
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.innerHTML = 'Load More Results';
+                
+                // Update pagination status
+                this.updatePaginationStatus();
+            });
+        }
+    }
+
+    updatePaginationStatus() {
+        const paginationStatus = indicatorService.getPaginationStatus();
+        const analysisState = indicatorService.getAnalysisState();
+        const statusContainer = document.getElementById('regression-pagination-status');
+        const statusText = document.getElementById('pagination-status-text');
+        const spinner = document.getElementById('pagination-spinner');
+        const loadMoreBtn = document.getElementById('load-more-regression-btn');
+
+        if (!statusContainer) return;
+
+        // Show/hide pagination status based on indicator state
+        if (analysisState.isActive && (paginationStatus.hasCursor || paginationStatus.isPaginating)) {
+            statusContainer.classList.remove('hidden');
+        } else {
+            statusContainer.classList.add('hidden');
+            return;
+        }
+
+        // Update UI based on pagination state
+        if (paginationStatus.isPaginating) {
+            spinner.classList.remove('hidden');
+            statusText.textContent = 'Loading more regression results...';
+            loadMoreBtn.classList.add('hidden');
+        } else if (paginationStatus.canLoadMore) {
+            spinner.classList.add('hidden');
+            statusText.textContent = 'Additional results available';
+            loadMoreBtn.classList.remove('hidden');
+        } else {
+            spinner.classList.add('hidden');
+            statusText.textContent = 'All results loaded';
+            loadMoreBtn.classList.add('hidden');
         }
     }
 
@@ -115,6 +195,9 @@ class RegressionTable {
         
         if (!tableHead || !tableBody) return;
         
+        // Update pagination status
+        this.updatePaginationStatus();
+        
         if (!data || !data.regression_results) {
             tableBody.innerHTML = `
                 <tr>
@@ -161,6 +244,12 @@ class RegressionTable {
         regressionLengthTh.className = 'sticky left-40 z-20 bg-base-100 border-r border-base-300 text-center w-24';
         headerRow.appendChild(regressionLengthTh);
 
+        // Data Count column
+        const dataCountTh = document.createElement('th');
+        dataCountTh.textContent = 'Data Points';
+        dataCountTh.className = 'text-center w-24';
+        headerRow.appendChild(dataCountTh);
+
         // Slope columns (in descending order) with color indicators
         sortedLookbackPeriods.forEach(period => {
             const th = document.createElement('th');
@@ -189,6 +278,12 @@ class RegressionTable {
         regression_results.forEach((timeframeResult, index) => {
             const row = document.createElement('tr');
             
+            // Add highlight for current timeframe
+            const currentInterval = this.store.get('selectedInterval');
+            if (timeframeResult.timeframe === currentInterval) {
+                row.classList.add('bg-primary/10');
+            }
+            
             // Sr. No. cell (sticky left)
             const srCell = row.insertCell();
             srCell.textContent = index + 1;
@@ -196,13 +291,23 @@ class RegressionTable {
             
             // Timeframe cell (sticky left)
             const timeframeCell = row.insertCell();
-            timeframeCell.textContent = timeframeResult.timeframe;
-            timeframeCell.className = 'sticky left-16 z-10 bg-base-100 border-r border-base-300 text-center font-medium w-24';
+            timeframeCell.innerHTML = `
+                <div class="flex items-center justify-center gap-1">
+                    <span class="font-medium">${timeframeResult.timeframe}</span>
+                    ${timeframeResult.is_partial ? '<div class="badge badge-warning badge-xs">partial</div>' : ''}
+                </div>
+            `;
+            timeframeCell.className = 'sticky left-16 z-10 bg-base-100 border-r border-base-300 text-center w-24';
 
             // Regression Length cell (sticky left)
             const regressionLengthCell = row.insertCell();
             regressionLengthCell.textContent = request_params.regression_length;
             regressionLengthCell.className = 'sticky left-40 z-10 bg-base-100 border-r border-base-300 text-center w-24';
+
+            // Data Count cell
+            const dataCountCell = row.insertCell();
+            dataCountCell.textContent = timeframeResult.data_count || 'N/A';
+            dataCountCell.className = 'text-center w-24';
 
             let totalRValue = 0;
             let rValueCount = 0;
@@ -215,9 +320,11 @@ class RegressionTable {
                     // Enhanced slope cell with color indicator and tooltip
                     const slopeValue = result.slope.toFixed(5);
                     const rSquared = (result.r_value * result.r_value).toFixed(3);
+                    const timestamp = result.timestamp ? new Date(result.timestamp).toLocaleTimeString() : '';
                     
                     slopeTd.innerHTML = `
-                        <div class="flex items-center justify-center gap-1" title="Slope: ${slopeValue}, R²: ${rSquared}">
+                        <div class="flex items-center justify-center gap-1" 
+                             title="Slope: ${slopeValue}, R²: ${rSquared}, Calculated: ${timestamp}">
                             <div class="w-2 h-2 rounded-full" 
                                  style="background-color: ${this.getColorForLookback(period)}"></div>
                             <span>${slopeValue}</span>
@@ -231,8 +338,8 @@ class RegressionTable {
                     totalRValue += Math.abs(result.r_value);
                     rValueCount++;
                 } else {
-                    slopeTd.textContent = 'N/A';
-                    slopeTd.className = 'text-center text-base-content/60';
+                    slopeTd.textContent = '—';
+                    slopeTd.className = 'text-center text-base-content/40';
                 }
             });
 
@@ -253,6 +360,9 @@ class RegressionTable {
 
         // Add legend section below table
         this.renderLegend(sortedLookbackPeriods);
+
+        // Add timestamp info
+        this.renderTimestampInfo(data);
 
         // Scroll the table to the rightmost position only on the initial render
         if (this.isInitialRender) {
@@ -299,6 +409,29 @@ class RegressionTable {
         `;
 
         tableContainer.appendChild(legend);
+    }
+
+    renderTimestampInfo(data) {
+        const tableContainer = document.getElementById('regression-table-container');
+        if (!tableContainer || !data.timestamp) return;
+
+        // Remove existing timestamp info
+        const existingInfo = tableContainer.querySelector('.regression-timestamp-info');
+        if (existingInfo) {
+            existingInfo.remove();
+        }
+
+        // Create timestamp info
+        const timestampInfo = document.createElement('div');
+        timestampInfo.className = 'regression-timestamp-info mt-2 text-xs text-base-content/60';
+        timestampInfo.innerHTML = `
+            <div class="flex items-center gap-4">
+                <span><i class="fas fa-clock"></i> Analysis completed: ${new Date(data.timestamp).toLocaleString()}</span>
+                ${data.is_partial ? '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Partial results - more data available</span>' : ''}
+            </div>
+        `;
+
+        tableContainer.appendChild(timestampInfo);
     }
 
     getColorForLookback(lookbackPeriod) {

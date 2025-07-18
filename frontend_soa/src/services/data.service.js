@@ -1,4 +1,4 @@
-// frontend_soa/src/services/data.service.js - FIXED WebSocket timing
+// frontend_soa/src/services/data.service.js - Updated to always include timestamps
 import { store } from '../state/store.js';
 import { showToast } from '../ui/helpers.js';
 import { websocketService } from './websocket.service.js';
@@ -48,8 +48,8 @@ class DataService {
     handleLiveMode(isLive) {
         if (isLive) {
             console.log('🔴 Live mode enabled - setting up connection');
-            // Set automatic date/time when enabling live mode
-            setAutomaticDateTime();
+            // Ensure we have timestamps when enabling live mode
+            this.ensureTimestamps();
             
             // Load initial data first, then connect WebSocket
             this.loadInitialChartData().then(() => {
@@ -63,12 +63,25 @@ class DataService {
         }
     }
 
+    ensureTimestamps() {
+        const startTime = this.store.get('startTime');
+        const endTime = this.store.get('endTime');
+        
+        if (!startTime || !endTime) {
+            console.log('📅 Setting automatic timestamps');
+            setAutomaticDateTime();
+        }
+    }
+
     connectWebSocket() {
         const params = {
             symbol: this.store.get('selectedSymbol'),
             interval: this.store.get('selectedInterval'),
             timezone: this.store.get('selectedTimezone'),
             candleType: this.store.get('selectedCandleType'),
+            // Include timestamps for consistency
+            startTime: this.store.get('startTime'),
+            endTime: this.store.get('endTime')
         };
         
         console.log('🔌 Connecting WebSocket with params:', params);
@@ -83,13 +96,18 @@ class DataService {
     async loadInitialChartData() {
         const token = this.store.get('sessionToken');
         const symbol = this.store.get('selectedSymbol');
-        const startTime = this.store.get('startTime');
-        const endTime = this.store.get('endTime');
         
         if (!token || !symbol || this.isFetching) return;
         
+        // Ensure timestamps are always present
+        this.ensureTimestamps();
+        
+        const startTime = this.store.get('startTime');
+        const endTime = this.store.get('endTime');
+        
         if (!startTime || !endTime) {
-            console.log('Skipping chart data load - missing time parameters');
+            console.error('Failed to set timestamps for chart data load');
+            showToast('Error: Unable to determine time range', 'error');
             return;
         }
 
@@ -99,7 +117,7 @@ class DataService {
         this.isFetching = true;
         this.store.set('isLoading', true);
 
-        // Reset chart data arrays. Indicator data is now handled by the line above.
+        // Reset chart data arrays
         this.store.set('chartData', []);
         this.store.set('volumeData', []);
         this.store.set('dataRequestId', null);
@@ -116,6 +134,7 @@ class DataService {
         try {
             const candleType = this.store.get('selectedCandleType');
             const interval = this.store.get('selectedInterval');
+            const timezone = this.store.get('selectedTimezone');
             
             // Determine endpoint based on candle type and interval
             let endpoint = 'historical';
@@ -136,11 +155,14 @@ class DataService {
                 interval: interval,
                 start_time: startTime,
                 end_time: endTime,
-                timezone: this.store.get('selectedTimezone'),
+                timezone: timezone,
+                // Include timestamp in request for server-side consistency
+                request_timestamp: new Date().toISOString()
             });
 
             const url = `${API_BASE_URL}/${endpoint}/?${params.toString()}`;
-            console.log(`Fetching data from: ${url}`);
+            console.log(`📊 Fetching data from: ${url}`);
+            console.log(`📅 Time range: ${startTime} to ${endTime} (${timezone})`);
 
             const res = await fetch(url);
             
@@ -150,6 +172,15 @@ class DataService {
             }
             
             const data = await res.json();
+            
+            // Validate that we received data with timestamps
+            if (data.candles && data.candles.length > 0) {
+                const firstCandle = data.candles[0];
+                const lastCandle = data.candles[data.candles.length - 1];
+                console.log(`📊 Received ${data.candles.length} candles`);
+                console.log(`📅 Data range: ${new Date(firstCandle.unix_timestamp * 1000).toISOString()} to ${new Date(lastCandle.unix_timestamp * 1000).toISOString()}`);
+            }
+            
             this.processAndStoreData(data, endpoint);
             showToast(data.message || 'Data loaded successfully', 'success');
 
@@ -202,7 +233,9 @@ class DataService {
             open: c.open, 
             high: c.high, 
             low: c.low, 
-            close: c.close 
+            close: c.close,
+            // Include original timestamp for reference
+            originalTimestamp: c.timestamp
         }));
         
         const volumeData = data.candles.map(c => ({ 
@@ -229,7 +262,19 @@ class DataService {
         this.store.set('dataRequestId', data.request_id);
         this.store.set('allDataLoaded', !data.is_partial);
         
-        console.log(`Processed ${chartData.length} candles for ${this.store.get('selectedSymbol')}`);
+        // Store metadata about the data
+        this.store.set('dataMetadata', {
+            symbol: this.store.get('selectedSymbol'),
+            interval: this.store.get('selectedInterval'),
+            timezone: this.store.get('selectedTimezone'),
+            startTime: this.store.get('startTime'),
+            endTime: this.store.get('endTime'),
+            dataType: dataType,
+            candleCount: chartData.length,
+            lastUpdate: new Date().toISOString()
+        });
+        
+        console.log(`✅ Processed ${chartData.length} candles for ${this.store.get('selectedSymbol')}`);
     }
 
     async fetchNextChunk() {
@@ -262,10 +307,14 @@ class DataService {
             const params = new URLSearchParams({
                 request_id: requestId,
                 offset: 0, // Not used in cursor-based pagination
-                limit: 5000
+                limit: 5000,
+                // Include timestamp for consistency
+                request_timestamp: new Date().toISOString()
             });
 
             const url = `${API_BASE_URL}/${endpoint}?${params.toString()}`;
+            console.log(`📊 Fetching next chunk from: ${url}`);
+            
             const res = await fetch(url);
             
             if (!res.ok) {
@@ -276,6 +325,7 @@ class DataService {
             const data = await res.json();
             
             if (data.candles && data.candles.length > 0) {
+                console.log(`📊 Received ${data.candles.length} additional candles`);
                 this.appendChunkData(data, candleType);
             } else {
                 this.store.set('allDataLoaded', true);
@@ -296,7 +346,8 @@ class DataService {
             open: c.open, 
             high: c.high, 
             low: c.low, 
-            close: c.close 
+            close: c.close,
+            originalTimestamp: c.timestamp
         }));
         
         const newVolumeData = data.candles.map(c => ({ 
@@ -325,7 +376,33 @@ class DataService {
         this.store.set('dataRequestId', data.request_id);
         this.store.set('allDataLoaded', !data.is_partial);
         
+        // Update metadata
+        const metadata = this.store.get('dataMetadata') || {};
+        metadata.candleCount = (existingChartData.length + newChartData.length);
+        metadata.lastUpdate = new Date().toISOString();
+        this.store.set('dataMetadata', metadata);
+        
         showToast(`Loaded ${data.candles.length} more candles`, 'success');
+    }
+
+    // Get current data status including timestamp information
+    getDataStatus() {
+        const metadata = this.store.get('dataMetadata');
+        const chartData = this.store.get('chartData');
+        
+        return {
+            hasData: chartData && chartData.length > 0,
+            candleCount: chartData ? chartData.length : 0,
+            metadata: metadata,
+            isLoading: this.store.get('isLoading'),
+            isPaginating: this.isPaginating,
+            allDataLoaded: this.store.get('allDataLoaded'),
+            timestamps: {
+                start: this.store.get('startTime'),
+                end: this.store.get('endTime'),
+                timezone: this.store.get('selectedTimezone')
+            }
+        };
     }
 }
 
