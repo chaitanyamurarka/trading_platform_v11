@@ -425,6 +425,23 @@ async def calculate_regression(request_data: dict):
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail="Regression Service error")
 
+@app.post("/regression/page", tags=["Regression"])
+async def get_regression_page(request_data: dict):
+    """Proxy request for a page of regression results."""
+    try:
+        response = await http_client.post(
+            f"{settings.REGRESSION_SERVICE_URL}/regression/page", 
+            json=request_data
+        )
+        response.raise_for_status()
+        logger.info(f"Successfully fetched regression page. Response status: {response.status_code}")
+        return response.json()
+    except httpx.RequestError as e:
+        logger.error(f"Error connecting to Regression Service: {e}")
+        raise HTTPException(status_code=503, detail="Regression Service unavailable")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="Regression Service error")
+
 # Live Regression Status
 @app.get("/live-regression/status", tags=["Live Regression"])
 async def get_live_regression_status():

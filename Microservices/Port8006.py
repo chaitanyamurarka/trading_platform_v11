@@ -251,26 +251,48 @@ class RegressionService:
     @staticmethod
     def _create_pagination_cursor(state: PaginationState) -> str:
         """Create a pagination cursor from the current state."""
+        
+        # Convert the original request to a dictionary
+        request_dict = state.original_request.dict()
+        
+        # Manually convert datetime objects to ISO 8601 strings
+        if isinstance(request_dict.get('start_time'), datetime):
+            request_dict['start_time'] = request_dict['start_time'].isoformat()
+        if isinstance(request_dict.get('end_time'), datetime):
+            request_dict['end_time'] = request_dict['end_time'].isoformat()
+
         cursor_data = {
-            "original_request": state.original_request.dict(),
+            "original_request": request_dict,
             "processed_timeframes": state.processed_timeframes,
             "current_timeframe_index": state.current_timeframe_index,
             "current_lookback_index": state.current_lookback_index,
             "total_results": {k: v.dict() for k, v in state.total_results.items()}
         }
+        
+        # Encode the dictionary to a JSON string and then to base64
         return base64.urlsafe_b64encode(json.dumps(cursor_data).encode()).decode()
 
     @staticmethod
     def _decode_pagination_cursor(cursor: str) -> PaginationState:
         """Decode a pagination cursor back to state."""
         try:
+            # Decode the base64 string and then the JSON string
             cursor_data = json.loads(base64.urlsafe_b64decode(cursor).decode())
+
+            # Manually convert ISO 8601 strings back to datetime objects
+            request_dict = cursor_data.get("original_request", {})
+            if request_dict.get('start_time') and isinstance(request_dict['start_time'], str):
+                request_dict['start_time'] = datetime.fromisoformat(request_dict['start_time'])
+            if request_dict.get('end_time') and isinstance(request_dict['end_time'], str):
+                request_dict['end_time'] = datetime.fromisoformat(request_dict['end_time'])
+
+            # Reconstruct the PaginationState object
             state = PaginationState(
-                original_request=RegressionRequest(**cursor_data["original_request"]),
-                processed_timeframes=cursor_data["processed_timeframes"],
-                current_timeframe_index=cursor_data["current_timeframe_index"],
-                current_lookback_index=cursor_data["current_lookback_index"],
-                total_results={k: TimeframeRegressionResult(**v) for k, v in cursor_data["total_results"].items()}
+                original_request=RegressionRequest(**request_dict),
+                processed_timeframes=cursor_data.get("processed_timeframes", []),
+                current_timeframe_index=cursor_data.get("current_timeframe_index", 0),
+                current_lookback_index=cursor_data.get("current_lookback_index", 0),
+                total_results={k: TimeframeRegressionResult(**v) for k, v in cursor_data.get("total_results", {}).items()}
             )
             return state
         except Exception as e:
