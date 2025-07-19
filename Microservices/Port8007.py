@@ -250,8 +250,18 @@ class LiveRegressionService:
         self.calculation_contexts: Dict[str, RegressionCalculationContext] = {}
         self.redis_subscriptions: Dict[str, Any] = {}
         self.calculation_tasks: Dict[str, asyncio.Task] = {}
-        self.redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-        
+        self.redis_client = aioredis.from_url(
+            settings.REDIS_URL, 
+            decode_responses=True,
+            max_connections=20,
+            socket_timeout=5.0,
+            socket_connect_timeout=3.0,
+            socket_keepalive=True,
+            health_check_interval=30,
+            retry_on_timeout=True,
+            retry_on_error=[aioredis.ConnectionError],
+            auto_close_connection_pool=False
+        )        
     async def add_subscription(self, websocket, subscription: LiveRegressionSubscription) -> bool:
         """Add a new live regression subscription supporting multiple timeframes."""
         logger.info(f"New client connection: Live regression subscription for {subscription.symbol} with timeframes: {subscription.timeframes}") # INFO: New client connections
@@ -335,7 +345,7 @@ class LiveRegressionService:
             logger.info(f"Cleanup operations: Unsubscribing from Redis for symbol {subscription.symbol}") # WARNING: Cleanup operations
             pubsub = self.redis_subscriptions.pop(subscription.symbol)
             await pubsub.unsubscribe()
-            await pubsub.close()
+            await pubsub.aclose()
         
         logger.info(f"Removed live regression subscription for {subscription.symbol} with {len(subscription.timeframes)} timeframes")
     
@@ -509,18 +519,49 @@ class LiveRegressionService:
             logger.error(f"Error starting Redis subscription for {symbol}: {e}", exc_info=True)
     
     async def _handle_redis_messages(self, symbol: str, pubsub):
-        """Handle incoming Redis messages for live tick updates."""
-        try:
-            async for message in pubsub.listen():
-                logger.debug(f"Raw Redis messages and tick processing details: Received raw message from Redis on channel {symbol}: {message}") # DEBUG: Raw Redis messages and tick processing details
-                if message['type'] == 'message':
-                    tick_data = json.loads(message['data'])
-                    await self._process_new_tick(symbol, tick_data)
-        except asyncio.CancelledError:
-            logger.info(f"Redis message handler for {symbol} was cancelled")
-        except Exception as e:
-            logger.error(f"Service failures: Error in Redis message handler for {symbol}: {e}", exc_info=True) # ERROR: Service failures
-    
+        """Listen for raw ticks and dispatch them for processing."""
+        logger.info(f"STARTING Redis message listener for channel: live_ticks:{symbol}")
+        retry_count = 0
+        max_retries = 3
+        
+        while retry_count < max_retries:
+            try:
+                async for message in pubsub.listen():
+                    logger.debug(f"Raw Redis message: {message}")
+                    if message['type'] == 'message':
+                        tick_data = json.loads(message['data'])
+                        await self._process_new_tick(symbol, tick_data)
+                        retry_count = 0  # Reset retry count on successful message
+            except asyncio.CancelledError:
+                logger.warning(f"Redis message listener for {symbol} was cancelled.")
+                break
+            except aioredis.ConnectionError as e:
+                retry_count += 1
+                logger.error(f"Redis connection error for {symbol} (attempt {retry_count}/{max_retries}): {e}")
+                
+                if retry_count < max_retries:
+                    # Wait before retry with exponential backoff
+                    wait_time = min(2 ** retry_count, 30)
+                    logger.info(f"Retrying Redis connection for {symbol} in {wait_time} seconds...")
+                    await asyncio.sleep(wait_time)
+                    
+                    # Recreate pubsub connection
+                    try:
+                        await pubsub.aclose()
+                        pubsub = self.redis_client.pubsub()
+                        await pubsub.subscribe(f"live_ticks:{symbol}")
+                        logger.info(f"Reconnected to Redis for {symbol}")
+                    except Exception as reconnect_error:
+                        logger.error(f"Failed to reconnect to Redis for {symbol}: {reconnect_error}")
+                else:
+                    logger.error(f"Max retries exceeded for Redis connection to {symbol}")
+                    break
+            except Exception as e:
+                logger.error(f"Service failures: Redis message listener for {symbol} failed: {e}", exc_info=True)
+                break
+        
+        logger.warning(f"STOPPED Redis message listener for channel: live_ticks:{symbol}")
+        
     async def _process_new_tick(self, symbol: str, tick_data: dict):
         relevant_contexts = [
             (key, context) for key, context in self.calculation_contexts.items()
@@ -669,15 +710,42 @@ class LiveRegressionService:
     
     async def close(self):
         """Clean up all resources."""
-        for task in self.calculation_tasks.values():
-            task.cancel()
+        logger.info("Starting LiveRegressionService cleanup...")
         
-        for pubsub in self.redis_subscriptions.values():
-            await pubsub.unsubscribe()
-            await pubsub.close()
+        # Cancel all calculation tasks
+        for context_key, task in self.calculation_tasks.items():
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                logger.info(f"Cancelled calculation task for {context_key}")
         
-        await self.redis_client.close()
-        logger.info("LiveRegressionService closed")
+        # Close all Redis subscriptions
+        for symbol, pubsub in self.redis_subscriptions.items():
+            try:
+                if pubsub:
+                    await pubsub.unsubscribe()
+                    await pubsub.aclose()  # Use aclose() instead of close()
+                    logger.info(f"Closed Redis subscription for {symbol}")
+            except Exception as e:
+                logger.warning(f"Error closing Redis subscription for {symbol}: {e}")
+        
+        # Close Redis client
+        try:
+            await self.redis_client.aclose()
+            logger.info("Closed Redis client")
+        except Exception as e:
+            logger.warning(f"Error closing Redis client: {e}")
+        
+        # Clear all data structures
+        self.subscriptions.clear()
+        self.calculation_contexts.clear()
+        self.redis_subscriptions.clear()
+        self.calculation_tasks.clear()
+        
+        logger.info("LiveRegressionService cleanup complete")
 
 # FastAPI App
 app = FastAPI(
